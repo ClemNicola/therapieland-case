@@ -37,9 +37,9 @@ DEBUG = env_bool("DJANGO_DEBUG", default=False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
-    # auth + contenttypes are required by DRF (request.user) and by the upcoming auth step.
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.sessions",
     "rest_framework",
     "drf_spectacular",
     "accounts",
@@ -49,8 +49,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.csp.ContentSecurityPolicyMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -84,9 +86,28 @@ DATABASES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Shared by all gunicorn workers (login rate limiting). Table created by `createcachetable`.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "django_cache",
+    }
+}
+
 # --- Authentication -----------------------------------------------------------
+# Server-side sessions in an HttpOnly cookie (not readable by JavaScript), plus CSRF
+# protection on unsafe methods. The SPA reads the `csrftoken` cookie and sends it back
+# in the X-CSRFToken header.
 
 AUTH_USER_MODEL = "accounts.User"
+
+# Idle timeout: the session expires after this many seconds without a request.
+# The organisation's security policy should set this value.
+SESSION_COOKIE_AGE = int(env("DJANGO_SESSION_IDLE_TIMEOUT", str(30 * 60)))
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 # Argon2id: memory-hard, the OWASP-recommended password hash.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
@@ -144,14 +165,17 @@ LOGGING = {
 # --- Django REST Framework ----------------------------------------------------
 
 REST_FRAMEWORK = {
-    # Authentication is added in a later step. Until then nobody is authenticated...
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    # ...and everything is denied by default: public endpoints must opt out explicitly.
+    "DEFAULT_AUTHENTICATION_CLASSES": ["accounts.authentication.SessionAuthentication"],
+    # Everything is denied by default: public endpoints must opt out explicitly.
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     # JSON only: no browsable HTML API, no form/multipart parsing.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_RATES": {"login": "5/min"},
+    # Client IP for rate limiting. 0 = use the socket address and ignore X-Forwarded-For,
+    # which any client can forge. Behind a TLS proxy: trust exactly that one hop.
+    "NUM_PROXIES": 1 if env_bool("DJANGO_BEHIND_TLS_PROXY", default=False) else 0,
 }
 
 # --- OpenAPI (drf-spectacular) ------------------------------------------------

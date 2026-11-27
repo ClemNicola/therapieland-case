@@ -27,6 +27,17 @@ make down    # stop (keeps data). `make reset` also deletes the database volume.
 | http://localhost:8000/api/schema/ | OpenAPI schema |
 | `localhost:5432` | PostgreSQL (`patients` / `patients-dev-password`, db `patients`) |
 
+### Demo accounts (local dev only)
+
+`make up` seeds two fake practitioner accounts (idempotent: existing accounts are left untouched):
+
+| Email | Password |
+|-------|----------|
+| `alice@example.com` | `alice-local-dev-only` |
+| `bob@example.com` | `bob-local-dev-only` |
+
+Create more with `make create-practitioner` (prompts for the details and the password).
+
 ## Commands
 
 All commands run inside the containers (start the stack with `make up` first).
@@ -38,6 +49,7 @@ All commands run inside the containers (start the stack with `make up` first).
 | `make lint` / `format` / `typecheck` | Ruff (lint + format), Oxlint, `tsc` |
 | `make schema` | Export the OpenAPI schema from Django, then regenerate the frontend client |
 | `make migrate` / `makemigrations` / `shell` | Django database and shell |
+| `make create-practitioner` | Create a practitioner account (there is no public signup) |
 | `make check-deploy` | Django production-readiness checks |
 | `make manage cmd="…"` | Any `manage.py` command |
 | `make uv cmd="add <pkg>"` | Add or remove backend dependencies |
@@ -56,6 +68,21 @@ into `app/src/api/generated/`. That folder is not committed; it is regenerated a
 **One origin, no CORS.** The Vite dev server proxies `/api` to Django, so the browser only talks to
 one origin. That removes a whole class of CORS misconfigurations and keeps cookie-based auth with CSRF
 protection simple. In production, put both behind the same reverse proxy.
+
+**Authentication: server-side sessions in an HttpOnly cookie.** Practitioners log in with email +
+password (`/api/auth/login/`, `/logout/`, `/me/`). Accounts are created by the organisation with
+`create_practitioner`: there is no public signup.
+- Sessions instead of tokens/JWT: JavaScript can't read the cookie (an XSS can't steal it), logout and
+  deactivation take effect immediately, and the frontend and API share one origin anyway.
+- CSRF protection on every unsafe request, login included. The SPA fetches `/api/auth/csrf/`, then
+  sends the `csrftoken` cookie value in the `X-CSRFToken` header.
+- 30-minute idle timeout. The session ID is rotated at login (session fixation).
+- Failed logins return one generic error (no way to discover which emails have an account), and
+  login is rate-limited to 5 attempts per minute per IP. The IP is never taken from a client-supplied
+  `X-Forwarded-For` header.
+- Passwords are hashed with Argon2 and must be 12+ characters and not common. The account creation
+  command prompts for the password and never accepts it as an argument (shell history, process list).
+- Unauthenticated requests get `401`, forbidden ones `403`.
 
 **Secure by default (backend).**
 - Configuration comes only from environment variables. `DEBUG` defaults to off, and the app refuses
@@ -94,8 +121,20 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
   client-side search, and requires key management. Data at rest is protected at the infrastructure
   level (encrypted disks and backups), in transit by TLS (`POSTGRES_SSLMODE`), and in the app by
   access control.
-- **Swagger UI loads from a CDN** and is public, like the schema. Both can be restricted once
-  authentication exists.
+- **Demo accounts with known passwords are seeded by `docker-compose.yml`.** Reviewers can log in
+  right away. This is local dev only: the seeding lives in the Compose command, not in the image, so a
+  production deployment never creates these accounts.
+- **Rate limiting instead of account lockout.** Locking an account after N failures stops slow,
+  distributed attacks on one account, but it also lets anyone lock a practitioner out. In production,
+  **two-factor authentication** is the better protection for health data: a stolen or guessed password
+  alone is no longer enough.
+- **The 30-minute idle timeout is a default, not a policy.** The organisation's security policy should
+  decide it (stricter settings like 15 minutes are common in hospitals). Configure it with
+  `DJANGO_SESSION_IDLE_TIMEOUT`.
+- **Rate-limit counters use Django's database cache** (shared by all gunicorn workers, no extra
+  service). Production deployments must run `python manage.py createcachetable` once, like migrations.
+  Redis would be the choice under heavy load.
+- **Swagger UI loads from a CDN** and is public, like the schema.
 
 ## Environment variables (api)
 
@@ -104,10 +143,11 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
 | `DJANGO_SECRET_KEY` | yes | none |
 | `DJANGO_ALLOWED_HOSTS` | yes in prod | empty (comma-separated list) |
 | `DJANGO_DEBUG` | no | `false` |
-| `DJANGO_BEHIND_TLS_PROXY` | no | `false` (trust `X-Forwarded-Proto`) |
+| `DJANGO_BEHIND_TLS_PROXY` | no | `false` (trust `X-Forwarded-Proto` and one `X-Forwarded-For` hop) |
 | `DJANGO_SECURE_SSL_REDIRECT` | no | `true` when `DEBUG` is off |
 | `DJANGO_HSTS_SECONDS` | no | `31536000` |
 | `DJANGO_LOG_LEVEL` | no | `INFO` |
+| `DJANGO_SESSION_IDLE_TIMEOUT` | no | `1800` (seconds) |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST` | yes | none |
 | `POSTGRES_PORT` | no | `5432` |
 | `POSTGRES_SSLMODE` | no | `prefer` (use `verify-full` across untrusted networks) |

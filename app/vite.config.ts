@@ -9,11 +9,12 @@ export default defineConfig({
   plugins: [react(), babel({ presets: [reactCompilerPreset()] }), tailwindcss()],
   server: {
     // The dev server proxies /api to Django: the browser only ever talks to one origin,
-    // so there is no CORS to configure and cookie/CSRF auth will work as-is.
+    // so there is no CORS to configure and the session cookie just works.
     proxy: {
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8000',
-        changeOrigin: true,
+        // Keep the browser's Host header: Django's CSRF check compares it with Origin.
+        changeOrigin: false,
       },
     },
   },

@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 from django.utils.csp import CSP
 from django.views.decorators.csp import csp_override
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerSplitView
@@ -20,6 +20,7 @@ SWAGGER_CSP = {
 
 urlpatterns = [
     path("api/health/", views.health, name="health"),
+    path("api/auth/", include("accounts.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/",

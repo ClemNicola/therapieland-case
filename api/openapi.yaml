@@ -3,6 +3,67 @@ info:
   title: Patient Management API
   version: 0.1.0
 paths:
+  /api/auth/csrf/:
+    get:
+      operationId: getCsrfToken
+      description: Sets the `csrftoken` cookie, to send back as the `X-CSRFToken`
+        header on unsafe requests.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/auth/login/:
+    post:
+      operationId: login
+      description: Starts a session for the practitioner (session cookie).
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/auth/logout/:
+    post:
+      operationId: logout
+      description: Ends the session.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/auth/me/:
+    get:
+      operationId: getMe
+      description: The logged-in practitioner.
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/health/:
     get:
       operationId: getHealth
@@ -11,6 +72,7 @@ paths:
       tags:
       - health
       security:
+      - cookieAuth: []
       - {}
       responses:
         '200':
@@ -34,6 +96,21 @@ components:
           $ref: '#/components/schemas/StatusEnum'
       required:
       - status
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 4096
+      required:
+      - email
+      - password
     StatusEnum:
       enum:
       - ok
@@ -42,3 +119,30 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+      required:
+      - email
+      - first_name
+      - id
+      - last_name
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

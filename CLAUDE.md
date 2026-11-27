@@ -30,6 +30,9 @@ Planned, one step at a time. Build only what the current step asks for; don't an
   (gitignored, regenerated before `dev`, `build`, `test` and `typecheck`).
 - After any API change: `make schema`.
 - The Vite dev server proxies `/api` to Django: one origin, so no CORS.
+- Auth is a session cookie (HttpOnly). Before any unsafe request, the frontend calls `GET /api/auth/csrf/`
+  once and sends the `csrftoken` cookie value as the `X-CSRFToken` header. `401` means "log in again".
+- Local demo accounts (seeded by `make up`): see the README.
 
 ## Frontend conventions
 
