@@ -90,6 +90,10 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
 - **The Compose stack is a development setup** (Vite dev server, Django `runserver`, bind mounts).
   A production deployment would build the frontend (`npm run build`), serve it and the API behind a
   TLS reverse proxy (set `DJANGO_BEHIND_TLS_PROXY=true`), and use the api image's default gunicorn command.
+- **No field-level encryption of patient data.** It would break database constraints and
+  client-side search, and requires key management. Data at rest is protected at the infrastructure
+  level (encrypted disks and backups), in transit by TLS (`POSTGRES_SSLMODE`), and in the app by
+  access control.
 - **Swagger UI loads from a CDN** and is public, like the schema. Both can be restricted once
   authentication exists.
 
