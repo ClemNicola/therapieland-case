@@ -5,7 +5,7 @@ Minimal scope and few layers, with production-level security, privacy and testin
 
 | Part  | Stack |
 |-------|-------|
-| `api/` | Python 3.14, Django 6.1, Django REST Framework, drf-spectacular (OpenAPI), PostgreSQL 18 |
+| `api/` | Python 3.14, Django 6.1, Django REST Framework, drf-spectacular (OpenAPI), fhir.resources (FHIR R4B), PostgreSQL 18 |
 | `app/` | Vite 8, React 19 + React Compiler, TypeScript, Tailwind CSS 4, TanStack Query, Zod, Orval |
 
 ## Getting started

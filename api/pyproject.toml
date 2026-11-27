@@ -7,6 +7,7 @@ dependencies = [
     "django>=6.1,<6.2",
     "djangorestframework>=3.18,<3.19",
     "drf-spectacular>=0.30,<0.31",
+    "fhir-resources>=8.3,<9",
     "gunicorn>=27,<28",
     "psycopg[binary]>=3.3,<3.4",
 ]
