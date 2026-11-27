@@ -37,6 +37,15 @@ app (`python manage.py startapp <name>`), e.g. `patients/`, with one file per re
   they may access. An object outside that scope returns **404, never 403** (don't reveal it exists).
 - Django admin stays disabled: it would bypass these rules.
 
+**Authentication**
+- Django sessions (HttpOnly cookie) via `accounts.authentication.SessionAuthentication`: unauthenticated
+  → 401, forbidden → 403. No tokens or JWT.
+- Every unsafe method is CSRF-protected. Login included: an anonymous view that changes state must call
+  `SessionAuthentication().enforce_csrf(request)` (DRF skips CSRF for anonymous requests).
+- Accounts are created only with `create_practitioner`. Never accept a password as a CLI argument.
+- Auth responses never reveal whether an email has an account.
+- Rate-limit sensitive anonymous endpoints with a throttle scope in `DEFAULT_THROTTLE_RATES`.
+
 **Identifiers**
 - Primary keys are random UUIDs: `id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`.
   Never expose sequential IDs (enumerable, leak volumes). Not UUIDv7 either: it embeds the creation time.
@@ -102,6 +111,7 @@ make lint / make format           # ruff
 make schema                       # export openapi.yaml + regenerate the frontend client
 make makemigrations / make migrate
 make shell                        # Django shell
+make create-practitioner          # create an account (interactive)
 make manage cmd="…"               # any manage.py command
 make uv cmd="add <pkg>"           # dependencies, then `make up` to rebuild
 ```
