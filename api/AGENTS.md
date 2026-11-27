@@ -38,8 +38,8 @@ app (`python manage.py startapp <name>`), e.g. `patients/`, with one file per re
 - Django admin stays disabled: it would bypass these rules.
 
 **Identifiers**
-- Primary keys of domain models are UUIDs: `id = models.UUIDField(primary_key=True, default=uuid.uuid7, editable=False)`.
-  Never expose sequential IDs (they can be enumerated and leak volumes).
+- Primary keys are random UUIDs: `id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`.
+  Never expose sequential IDs (enumerable, leak volumes). Not UUIDv7 either: it embeds the creation time.
 - The model UUID is the FHIR `Patient.id`. Business identifiers (e.g. a national patient number) are
   separate fields, never primary keys, and never appear in URLs.
 
@@ -79,6 +79,7 @@ Patient data is exposed as **FHIR R4** resources, built and validated with `fhir
 - **Write the failing test first.** Run it, and check it fails for the expected reason before
   implementing. Then make it pass with the simplest code, then refactor.
 - pytest function style, plain `assert`, real PostgreSQL test DB (`@pytest.mark.django_db`).
+- Build test data with the shared fixtures in `conftest.py` (`make_user`, `make_patient`); fake data only.
 - Every endpoint is tested for: unauthenticated access, another user's object (→ 404),
   invalid input (→ 400), and the happy path.
 - Test behaviour through the public surface (HTTP for views, function calls for services/selectors).
