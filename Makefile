@@ -32,8 +32,8 @@ ps: ## Show service status
 ## --- Quality -----------------------------------------------------------------
 test: test-api test-app ## Run all tests
 
-test-api: ## Run backend tests (pytest)
-	$(API) pytest
+test-api: ## Run backend tests (pytest), e.g. make test-api args="-k health"
+	$(API) pytest $(args)
 
 test-app: ## Run frontend tests (vitest)
 	$(APP) npm test
