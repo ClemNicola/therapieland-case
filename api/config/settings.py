@@ -171,6 +171,8 @@ REST_FRAMEWORK = {
     # JSON only: no browsable HTML API, no form/multipart parsing.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    # Content negotiation only via the Accept header: no `?format=` query parameter.
+    "URL_FORMAT_OVERRIDE": None,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_RATES": {"login": "5/min"},
     # Client IP for rate limiting. 0 = use the socket address and ignore X-Forwarded-For,

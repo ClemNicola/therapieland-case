@@ -36,7 +36,11 @@ make down    # stop (keeps data). `make reset` also deletes the database volume.
 | `alice@example.com` | `alice-local-dev-only` |
 | `bob@example.com` | `bob-local-dev-only` |
 
-Create more with `make create-practitioner` (prompts for the details and the password).
+It also seeds obviously fake patients (family name "Demo", `@example.com` emails, `+00` phone
+numbers) to show the scoping: Alice follows *Alpha*, *Bravo* and *Charlie*, Bob follows *Delta* and
+*Echo*, and both follow *Shared*.
+
+Create more accounts with `make create-practitioner` (prompts for the details and the password).
 
 ## Commands
 
@@ -83,6 +87,20 @@ password (`/api/auth/login/`, `/logout/`, `/me/`). Accounts are created by the o
 - Passwords are hashed with Argon2 and must be 12+ characters and not common. The account creation
   command prompts for the password and never accepts it as an argument (shell history, process list).
 - Unauthenticated requests get `401`, forbidden ones `403`.
+
+**Patients: a REST API exposing FHIR R4 resources** (`/api/patients/`, validated with
+`fhir.resources.R4B`).
+- `GET /` returns a FHIR `Bundle` (searchset) of the practitioner's active patients. `POST /` creates a
+  patient followed by its creator (`201` + `Location`). `GET`/`PUT /{id}/` reads/replaces a `Patient`.
+- `DELETE /{id}/` means "stop following": it removes the link for the requesting practitioner only.
+  The patient is archived (`active = false`, never hard-deleted) once nobody follows it anymore.
+- A practitioner only ever reaches the patients they follow. Anything else (someone else's patient,
+  archived, unknown or malformed id) returns the same `404`.
+- The database stores a small subset of the Patient resource; unsupported FHIR elements are rejected
+  with a `400`, never silently dropped.
+- Errors are FHIR `OperationOutcome`s with a precise issue code and element path
+  (`Patient.birthDate`). Messages are fixed strings: they never echo submitted values (PHI).
+- Content type `application/fhir+json` (plain `application/json` also accepted and served on request).
 
 **Secure by default (backend).**
 - Configuration comes only from environment variables. `DEBUG` defaults to off, and the app refuses
@@ -135,6 +153,19 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
   service). Production deployments must run `python manage.py createcachetable` once, like migrations.
   Redis would be the choice under heavy load.
 - **Swagger UI loads from a CDN** and is public, like the schema.
+- **No server-side search, filters or pagination**: the list returns all of a practitioner's active
+  patients and the frontend searches them. Fine for a caseload of hundreds of patients, simpler, and
+  no PHI in URLs (search terms). With thousands per practitioner, add FHIR search parameters and paging.
+- **Deleting a shared patient only unfollows it.** Archiving when Alice deletes would make the patient
+  disappear for Bob, who still treats them. So `DELETE` removes the requesting practitioner's link, and
+  the patient is archived only when the last practitioner stops following it (the check locks the row,
+  so concurrent deletes can't leave an active patient nobody follows). Consequence: a patient is never
+  hidden from colleagues by one practitioner's action.
+- **No optimistic locking** (FHIR `ETag` / `If-Match`): if two practitioners edit the same patient at
+  the same time, the last write wins.
+- **Archived patients return `404`**, not FHIR's `410 Gone`, and there is no restore endpoint yet.
+- **No `PATCH`**: updates replace the whole resource (`PUT`), which a FHIR client does by default.
+- **One name, one phone and one email per patient** (data minimization; FHIR allows lists).
 
 ## Environment variables (api)
 

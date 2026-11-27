@@ -87,8 +87,331 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
           description: ''
+  /api/patients/:
+    get:
+      operationId: listPatients
+      description: The practitioner's active patients, as a FHIR searchset Bundle
+        (no pagination).
+      tags:
+      - patients
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/fhir+json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PatientBundle'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PatientBundle'
+          description: ''
+        '401':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '404':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+    post:
+      operationId: createPatient
+      description: Creates a patient followed by the logged-in practitioner.
+      tags:
+      - patients
+      requestBody:
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/PatientRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: ''
+        '400':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '401':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '404':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+  /api/patients/{id}/:
+    get:
+      operationId: getPatient
+      description: Patients as FHIR R4 resources, scoped to the logged-in practitioner.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - patients
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: ''
+        '401':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '404':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+    put:
+      operationId: updatePatient
+      description: Replaces the patient (FHIR update). A body `id`, if any, must match
+        the URL.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - patients
+      requestBody:
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/PatientRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: ''
+        '400':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '401':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '404':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+    delete:
+      operationId: deletePatient
+      description: The practitioner stops following the patient; archived once nobody
+        follows it.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - patients
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '403':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
+        '404':
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationOutcome'
+          description: ''
 components:
   schemas:
+    BundleEntry:
+      type: object
+      properties:
+        fullUrl:
+          type: string
+          format: uri
+        resource:
+          $ref: '#/components/schemas/Patient'
+      required:
+      - fullUrl
+      - resource
+    ContactPoint:
+      type: object
+      properties:
+        system:
+          $ref: '#/components/schemas/SystemEnum'
+        value:
+          type: string
+      required:
+      - system
+      - value
+    ContactPointRequest:
+      type: object
+      properties:
+        system:
+          $ref: '#/components/schemas/SystemEnum'
+        value:
+          type: string
+          minLength: 1
+      required:
+      - system
+      - value
+    GenderEnum:
+      enum:
+      - male
+      - female
+      - other
+      - unknown
+      type: string
+      description: |-
+        * `male` - Male
+        * `female` - Female
+        * `other` - Other
+        * `unknown` - Unknown
     Health:
       type: object
       properties:
@@ -96,6 +419,44 @@ components:
           $ref: '#/components/schemas/StatusEnum'
       required:
       - status
+    HumanName:
+      type: object
+      properties:
+        use:
+          $ref: '#/components/schemas/UseEnum'
+        family:
+          type: string
+          maxLength: 150
+        given:
+          type: array
+          items:
+            type: string
+            maxLength: 150
+          maxItems: 1
+          minItems: 1
+      required:
+      - family
+      - given
+    HumanNameRequest:
+      type: object
+      properties:
+        use:
+          $ref: '#/components/schemas/UseEnum'
+        family:
+          type: string
+          minLength: 1
+          maxLength: 150
+        given:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 150
+          maxItems: 1
+          minItems: 1
+      required:
+      - family
+      - given
     LoginRequest:
       type: object
       properties:
@@ -111,6 +472,141 @@ components:
       required:
       - email
       - password
+    Meta:
+      type: object
+      properties:
+        lastUpdated:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - lastUpdated
+    OperationOutcome:
+      type: object
+      properties:
+        resourceType:
+          $ref: '#/components/schemas/OperationOutcomeResourceTypeEnum'
+        issue:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationOutcomeIssue'
+      required:
+      - issue
+      - resourceType
+    OperationOutcomeIssue:
+      type: object
+      properties:
+        severity:
+          $ref: '#/components/schemas/SeverityEnum'
+        code:
+          type: string
+        diagnostics:
+          type: string
+        expression:
+          type: array
+          items:
+            type: string
+      required:
+      - code
+      - diagnostics
+      - severity
+    OperationOutcomeResourceTypeEnum:
+      enum:
+      - OperationOutcome
+      type: string
+      description: '* `OperationOutcome` - OperationOutcome'
+    Patient:
+      type: object
+      properties:
+        resourceType:
+          $ref: '#/components/schemas/PatientResourceTypeEnum'
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        meta:
+          allOf:
+          - $ref: '#/components/schemas/Meta'
+          readOnly: true
+        active:
+          type: boolean
+          readOnly: true
+        name:
+          type: array
+          items:
+            $ref: '#/components/schemas/HumanName'
+        telecom:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactPoint'
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        birthDate:
+          type: string
+          format: date
+      required:
+      - active
+      - birthDate
+      - gender
+      - id
+      - meta
+      - name
+      - resourceType
+    PatientBundle:
+      type: object
+      properties:
+        resourceType:
+          $ref: '#/components/schemas/PatientBundleResourceTypeEnum'
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        total:
+          type: integer
+        entry:
+          type: array
+          items:
+            $ref: '#/components/schemas/BundleEntry'
+      required:
+      - resourceType
+      - total
+      - type
+    PatientBundleResourceTypeEnum:
+      enum:
+      - Bundle
+      type: string
+      description: '* `Bundle` - Bundle'
+    PatientRequest:
+      type: object
+      properties:
+        resourceType:
+          $ref: '#/components/schemas/PatientResourceTypeEnum'
+        name:
+          type: array
+          items:
+            $ref: '#/components/schemas/HumanNameRequest'
+        telecom:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactPointRequest'
+        gender:
+          $ref: '#/components/schemas/GenderEnum'
+        birthDate:
+          type: string
+          format: date
+      required:
+      - birthDate
+      - gender
+      - name
+      - resourceType
+    PatientResourceTypeEnum:
+      enum:
+      - Patient
+      type: string
+      description: '* `Patient` - Patient'
+    SeverityEnum:
+      enum:
+      - error
+      type: string
+      description: '* `error` - error'
     StatusEnum:
       enum:
       - ok
@@ -119,6 +615,24 @@ components:
       description: |-
         * `ok` - ok
         * `unavailable` - unavailable
+    SystemEnum:
+      enum:
+      - phone
+      - email
+      type: string
+      description: |-
+        * `phone` - phone
+        * `email` - email
+    TypeEnum:
+      enum:
+      - searchset
+      type: string
+      description: '* `searchset` - searchset'
+    UseEnum:
+      enum:
+      - official
+      type: string
+      description: '* `official` - official'
     User:
       type: object
       properties:

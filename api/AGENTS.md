@@ -82,6 +82,11 @@ Patient data is exposed as **FHIR R4** resources, built and validated with `fhir
   Coded fields are constrained by our `TextChoices`, mirroring the FHIR value set exactly.
 - Unsupported FHIR elements in input are rejected with a 400, never silently dropped or stored raw.
 - Growing the subset is deliberate: add a column, its mapping, and tests.
+- Errors of FHIR endpoints are `OperationOutcome`s (`patients.views.fhir_exception_handler`): a FHIR
+  issue code, the element path in `expression`, and a fixed message. Never pass library error text
+  (pydantic, DRF) through: it can contain submitted values. Only known element names go in `expression`.
+- `DELETE` on a patient = the practitioner stops following it; archived when nobody follows it.
+  Patients are never hard-deleted.
 
 ## Tests (TDD)
 
