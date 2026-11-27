@@ -1,0 +1,78 @@
+# Local development stack: Postgres + Django API + Vite dev server.
+#
+# TRADE-OFF: credentials and the Django secret key are written inline for a zero-setup
+# local start. They are dev-only values: never reuse them, and inject real secrets from
+# the environment / a secret manager in any shared or production environment.
+# All ports are bound to 127.0.0.1 so nothing is reachable from the local network.
+
+name: therapieland-case
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: patients
+      POSTGRES_USER: patients
+      POSTGRES_PASSWORD: patients-dev-password
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # Postgres 18+ stores data in a versioned sub-directory: mount the parent directory.
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patients -d patients"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  api:
+    build:
+      context: ./api
+      args:
+        DEV: "true"
+    # Dev override of the image's gunicorn CMD: apply migrations, then hot-reloading server.
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DJANGO_SECRET_KEY: dev-only-insecure-secret-key-change-me-in-any-real-environment
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api
+      POSTGRES_DB: patients
+      POSTGRES_USER: patients
+      POSTGRES_PASSWORD: patients-dev-password
+      POSTGRES_HOST: db
+    volumes:
+      - ./api:/code
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build: ./app
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8000
+    volumes:
+      - ./app:/app
+      # Keep the image's node_modules (Linux binaries) instead of the host's.
+      - /app/node_modules
+      # Read-only access to the OpenAPI schema for Orval (same ../api path as on the host).
+      - ./api:/api:ro
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:5173/"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  db-data:

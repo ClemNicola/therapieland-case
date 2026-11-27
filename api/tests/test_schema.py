@@ -1,0 +1,25 @@
+from pathlib import Path
+
+from django.conf import settings
+from django.core.management import call_command
+
+COMMITTED_SCHEMA = Path(settings.BASE_DIR) / "openapi.yaml"
+
+
+def test_schema_is_served(client):
+    response = client.get("/api/schema/", HTTP_ACCEPT="application/vnd.oai.openapi+json")
+
+    assert response.status_code == 200
+    assert response.json()["openapi"].startswith("3.")
+
+
+def test_swagger_ui_is_served(client):
+    assert client.get("/api/docs/").status_code == 200
+
+
+def test_committed_schema_is_up_to_date(tmp_path):
+    """openapi.yaml drives the frontend codegen: it must match the code. Fix: `make schema`."""
+    generated = tmp_path / "openapi.yaml"
+    call_command("spectacular", "--file", str(generated), "--fail-on-warn")
+
+    assert COMMITTED_SCHEMA.read_text() == generated.read_text()
