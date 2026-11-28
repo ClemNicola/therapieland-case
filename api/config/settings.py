@@ -108,6 +108,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_NAME = "csrftoken"  # read by the SPA and Swagger UI (Django's default, made explicit)
 
 # Argon2id: memory-hard, the OWASP-recommended password hash.
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.Argon2PasswordHasher"]
@@ -193,4 +194,18 @@ SPECTACULAR_SETTINGS = {
     # Pin the Swagger UI assets (default is @latest from the CDN: a supply-chain risk).
     "SWAGGER_UI_DIST": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.36.0",
     "SWAGGER_UI_FAVICON_HREF": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.36.0/favicon-32x32.png",
+    # Raw JS (drf-spectacular passes a string through unchanged). Its default interceptor
+    # sends the CSRF token from page load, which login rotates: read the cookie per request
+    # instead, like the SPA. Same-origin requests only, so the token never leaves the API.
+    "SWAGGER_UI_SETTINGS": """{
+  deepLinking: true,
+  requestInterceptor: (request) => {
+    const sameOrigin = new URL(request.url, document.baseURI).origin === location.origin;
+    if (sameOrigin && !["GET", "HEAD", "OPTIONS", undefined].includes(request.method)) {
+      const cookie = document.cookie.split("; ").find((c) => c.startsWith("CSRF_COOKIE_NAME="));
+      if (cookie) request.headers["X-CSRFToken"] = decodeURIComponent(cookie.split("=")[1]);
+    }
+    return request;
+  },
+}""".replace("CSRF_COOKIE_NAME", CSRF_COOKIE_NAME),
 }

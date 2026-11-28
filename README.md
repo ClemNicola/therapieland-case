@@ -43,6 +43,19 @@ numbers) to show the scoping: Alice follows *Alpha*, *Bravo* and *Charlie*, Bob 
 
 Create more accounts with `make create-practitioner` (prompts for the details and the password).
 
+### Try the API manually (Swagger UI)
+
+Open **http://localhost:8000/api/docs/**. It uses the same session cookie and CSRF protection as
+the frontend, so there is nothing to configure (no token to paste; ignore the "Authorize" button,
+the login request sets the cookie):
+
+1. `POST /api/auth/login/` → *Try it out* with `{"email": "alice@example.com", "password": "alice-local-dev-only"}`.
+2. Call the patient endpoints (`GET /api/patients/`, `POST`, `PUT`, `DELETE`): you only see Alice's patients.
+3. `POST /api/auth/logout/`, then log in as Bob to compare the scoping.
+
+The page only describes the API; every endpoint behind it still requires a login. Swagger UI reads
+the `csrftoken` cookie before each unsafe request (login rotates it) and sends it as `X-CSRFToken`.
+
 ## Commands
 
 All commands run inside the containers (start the stack with `make up` first).
@@ -154,7 +167,9 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
 - **Rate-limit counters use Django's database cache** (shared by all gunicorn workers, no extra
   service). Production deployments must run `python manage.py createcachetable` once, like migrations.
   Redis would be the choice under heavy load.
-- **Swagger UI loads from a CDN** and is public, like the schema.
+- **Swagger UI loads from a CDN** and is public, like the schema. Both describe routes and shapes,
+  never data, and every data endpoint still requires a login. A deployment that wants to hide its
+  API surface can restrict `SERVE_PERMISSIONS` in `SPECTACULAR_SETTINGS`.
 - **No server-side search, filters or pagination**: the list returns all of a practitioner's active
   patients and the frontend searches them. Fine for a caseload of hundreds of patients, simpler, and
   no PHI in URLs (search terms). With thousands per practitioner, add FHIR search parameters and paging.
