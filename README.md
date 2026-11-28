@@ -161,6 +161,9 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
   distributed attacks on one account, but it also lets anyone lock a practitioner out. In production,
   **two-factor authentication** is the better protection for health data: a stolen or guessed password
   alone is no longer enough.
+- **The login rate limit is approximate under parallel requests.** DRF's throttle reads then writes
+  its counter without a lock, so simultaneous attempts can slip past it (roughly one extra per gunicorn
+  worker per window, not unlimited). Acceptable as a brute-force brake; 2FA is the real protection.
 - **The 30-minute idle timeout is a default, not a policy.** The organisation's security policy should
   decide it (stricter settings like 15 minutes are common in hospitals). Configure it with
   `DJANGO_SESSION_IDLE_TIMEOUT`.
@@ -183,6 +186,8 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
 - **Archived patients return `404`**, not FHIR's `410 Gone`, and there is no restore endpoint yet.
 - **No `PATCH`**: updates replace the whole resource (`PUT`), which a FHIR client does by default.
 - **One name, one phone and one email per patient** (data minimization; FHIR allows lists).
+- **Request bodies are capped at 100 KB** (`DATA_UPLOAD_MAX_MEMORY_SIZE`; a patient is ~1 KB) and
+  FHIR input deeper than 10 levels is rejected. A production reverse proxy should enforce a body limit too.
 
 ## Next steps
 

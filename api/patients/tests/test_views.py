@@ -1,3 +1,4 @@
+import json
 import uuid
 
 import pytest
@@ -132,8 +133,6 @@ def test_list_also_answers_plain_json_when_asked(client):
 
 @pytest.mark.parametrize("content_type", [FHIR_JSON, "application/json"])
 def test_create_links_the_patient_to_its_creator(client, alice, content_type):
-    import json
-
     response = client.post(LIST_URL, json.dumps(NEW_PATIENT), content_type=content_type)
 
     assert response.status_code == 201
@@ -167,6 +166,40 @@ def test_create_rejects_malformed_json(client):
 
     assert response.status_code == 400
     assert outcome_codes(response) == [("structure", None)]
+
+
+def test_create_rejects_deeply_nested_json(client):
+    depth = 50_000
+    response = client.post(LIST_URL, "[" * depth + "]" * depth, content_type=FHIR_JSON)
+
+    assert response.status_code == 400
+    assert outcome_codes(response) == [("structure", None)]
+
+
+def test_create_rejects_an_oversized_body(client, settings):
+    settings.DATA_UPLOAD_MAX_MEMORY_SIZE = 1000
+    body = json.dumps({**NEW_PATIENT, "padding": "x" * 1000})
+
+    response = client.post(LIST_URL, body, content_type=FHIR_JSON)
+
+    assert response.status_code == 413
+    assert outcome_codes(response) == [("too-costly", None)]
+
+
+def test_unexpected_errors_are_a_generic_operation_outcome(client, monkeypatch, caplog):
+    secret = "SECRET-PHI-VALUE"
+
+    def crash(**kwargs):
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr("patients.views.patient_list", crash)
+    response = client.get(LIST_URL)
+
+    assert response.status_code == 500
+    assert outcome_codes(response) == [("exception", None)]
+    assert secret not in response.content.decode()
+    assert "RuntimeError" in caplog.text  # logged for debugging...
+    assert secret not in caplog.text  # ...without the message, which may contain PHI
 
 
 def test_create_rejects_unsupported_content_type(client):
@@ -206,12 +239,17 @@ def test_inaccessible_patients_are_indistinguishable(client, alice, bob, make_pa
         "malformed": lambda: "not-a-uuid",
     }[case]()
 
+    before = list(Patient.objects.values()), list(Patient.practitioners.through.objects.values())
+
     for method in ("get", "put", "delete"):
         response = getattr(client, method)(detail_url(target), NEW_PATIENT, format="json")
 
         assert response.status_code == 404, method
         assert response.json() == NOT_FOUND
         assert response["Content-Type"] == FHIR_JSON
+
+    after = list(Patient.objects.values()), list(Patient.practitioners.through.objects.values())
+    assert after == before  # nothing written
 
 
 # --- Update -----------------------------------------------------------------------

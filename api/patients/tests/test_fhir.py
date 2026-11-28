@@ -97,6 +97,7 @@ def test_id_must_match_the_expected_id():
     expected = "0b0e6b4e-0000-4000-8000-000000000000"
 
     assert patient_from_fhir(payload(id=expected), expected_id=expected)
+    assert patient_from_fhir(payload(id=expected.upper()), expected_id=expected)
     assert issues_of(payload(id="another-id"), expected_id=expected) == [("value", "Patient.id")]
 
 
@@ -141,6 +142,20 @@ def test_id_must_match_the_expected_id():
             payload(name=[{"family": "Smith", "given": ["John"], "foo": "bar"}]),
             [("structure", "Patient.name[0]")],
         ),
+        (
+            payload(name=[{"family": "Smith\u0000", "given": ["John"]}]),
+            [("value", "Patient.name[0].family")],
+        ),
+        (
+            payload(name=[{"family": "Smith", "given": ["Jo\nhn"]}]),
+            [("value", "Patient.name[0].given")],
+        ),
+        (payload(meta={"tag": [{"code": "x"}]}), [("not-supported", "Patient.meta.tag")]),
+        (
+            payload(meta={"security": [{"code": "R"}]}),
+            [("not-supported", "Patient.meta.security")],
+        ),
+        (payload(meta={"foo": "bar"}), [("structure", "Patient.meta")]),
         (payload(gender=...), [("required", "Patient.gender")]),
         (payload(gender="nope"), [("value", "Patient.gender")]),
         (payload(birthDate=...), [("required", "Patient.birthDate")]),
@@ -172,6 +187,16 @@ def test_id_must_match_the_expected_id():
 )
 def test_invalid_resources_are_rejected(data, expected):
     assert issues_of(data) == expected
+
+
+def test_deeply_nested_input_is_rejected_before_validation():
+    nested: dict = {"url": "http://example.com"}
+    for _ in range(2000):  # deep enough to exhaust pydantic's recursion
+        nested = {"url": "http://example.com", "extension": [nested]}
+
+    assert issues_of(payload(name=[{"family": "Smith", "given": ["John"], **nested}])) == [
+        ("structure", None)
+    ]
 
 
 def test_all_problems_are_reported_at_once():

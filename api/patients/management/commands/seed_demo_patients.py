@@ -8,6 +8,7 @@ import datetime
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.models import User
+from accounts.selectors import user_get_by_email
 from patients.models import Gender
 from patients.selectors import patient_list
 from patients.services import patient_add_practitioner, patient_create
@@ -31,7 +32,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options) -> None:
         try:
             practitioners = {
-                email: User.objects.get_by_natural_key(email) for email in (ALICE, BOB)
+                email: user_get_by_email(email=email) for email in (ALICE, BOB)
             }
         except User.DoesNotExist as error:
             raise CommandError("Create the demo practitioners first.") from error

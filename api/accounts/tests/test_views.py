@@ -125,6 +125,13 @@ def test_login_requires_email_and_password(client, db):
     assert set(response.json()) == {"email", "password"}
 
 
+def test_login_rejects_deeply_nested_json(client, db):
+    depth = 50_000
+    response = client.post(LOGIN_URL, "[" * depth + "]" * depth, content_type="application/json")
+
+    assert response.status_code == 400
+
+
 def test_login_is_rate_limited_per_ip(client, practitioner):
     for _ in range(5):
         assert login(client, password="wrong-password-123").status_code == 400

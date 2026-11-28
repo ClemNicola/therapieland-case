@@ -7,12 +7,15 @@ strings and their expressions only contain known FHIR element names: submitted v
 
 import datetime
 import re
+import uuid
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.utils import timezone
+from fhir.resources.R4B.meta import Meta as FhirMeta
 from fhir.resources.R4B.patient import Patient as FhirPatient
 from pydantic import ValidationError as PydanticValidationError
 
@@ -23,6 +26,10 @@ PHONE_MAX_LENGTH = Patient._meta.get_field("phone").max_length
 EMAIL_MAX_LENGTH = Patient._meta.get_field("email").max_length
 PHONE_PATTERN = re.compile(r"^\+?[0-9 ().-]+$")
 FULL_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+CONTROL_CHARACTERS = re.compile(r"[\x00-\x1f\x7f]")  # NUL is rejected by PostgreSQL
+# The deepest supported element is Patient.name[0].given[0]. Anything much deeper is
+# rejected before validation, which recurses (deep input → RecursionError → 500).
+MAX_DEPTH = 10
 
 # Every element name a FHIR R4 Patient may contain (JSON names).
 FHIR_PATIENT_ELEMENTS = {"resourceType"} | {
@@ -39,6 +46,8 @@ SUPPORTED_ELEMENTS = {
     "gender",
     "birthDate",
 }
+FHIR_META_ELEMENTS = {name for name in FhirMeta.model_fields if "__" not in name}
+SUPPORTED_META_ELEMENTS = {"lastUpdated", "versionId"}  # server-managed: accepted, ignored
 SUPPORTED_NAME_ELEMENTS = {"use", "family", "given"}
 SUPPORTED_TELECOM_ELEMENTS = {"system", "value"}
 
@@ -107,6 +116,8 @@ def patient_from_fhir(data: Any, *, expected_id: str | None = None) -> dict[str,
     """
     if not isinstance(data, dict):
         raise FhirInputError([Issue("structure", "The body must be a FHIR Patient resource.")])
+    if _depth(data) > MAX_DEPTH:
+        raise FhirInputError([Issue("structure", "The resource is nested too deeply.")])
 
     issues = _check_top_level(data, expected_id)
     # resourceType is checked above; validate the supported elements against FHIR R4.
@@ -115,6 +126,13 @@ def patient_from_fhir(data: Any, *, expected_id: str | None = None) -> dict[str,
         for key, value in data.items()
         if key in SUPPORTED_ELEMENTS and key != "resourceType"
     }
+    if isinstance(resource.get("meta"), dict):
+        issues += _check_meta(resource["meta"])
+        resource["meta"] = {
+            key: value
+            for key, value in resource["meta"].items()
+            if key in SUPPORTED_META_ELEMENTS
+        }
     invalid_elements = set()
     try:
         FhirPatient.model_validate(resource)
@@ -151,9 +169,41 @@ def _check_top_level(data: dict, expected_id: str | None) -> list[Issue]:
             issues.append(Issue("structure", "Unknown element.", "Patient"))
         elif key not in SUPPORTED_ELEMENTS:
             issues.append(Issue("not-supported", "Element not supported.", f"Patient.{key}"))
-    if expected_id is not None and "id" in data and data["id"] != expected_id:
+    if expected_id is not None and "id" in data and not _same_uuid(data["id"], expected_id):
         issues.append(Issue("value", "id must match the id in the URL.", "Patient.id"))
     return issues
+
+
+def _check_meta(meta: dict) -> list[Issue]:
+    # Unsupported meta (security labels, tags...) is rejected, never silently dropped.
+    issues = []
+    for key in meta.keys() - SUPPORTED_META_ELEMENTS:
+        if key in FHIR_META_ELEMENTS:
+            issues.append(Issue("not-supported", "Element not supported.", f"Patient.meta.{key}"))
+        else:
+            issues.append(Issue("structure", "Unknown element.", "Patient.meta"))
+    return issues
+
+
+def _same_uuid(value: Any, expected: str) -> bool:
+    try:
+        return uuid.UUID(str(value)) == uuid.UUID(expected)
+    except ValueError:
+        return False
+
+
+def _depth(data: Any) -> int:
+    """Nesting depth of parsed JSON, computed without recursion."""
+    deepest, stack = 0, [(data, 1)]
+    while stack:
+        value, depth = stack.pop()
+        if isinstance(value, dict | list):
+            deepest = max(deepest, depth)
+            if depth > MAX_DEPTH:
+                break
+            children = value.values() if isinstance(value, dict) else value
+            stack.extend((child, depth + 1) for child in children)
+    return deepest
 
 
 def _issue_from_pydantic(error: dict, resource: dict) -> Issue:
@@ -214,6 +264,8 @@ def _required_text(value: str | None, expression: str, issues: list[Issue]) -> s
     value = (value or "").strip()
     if not value:
         issues.append(Issue("required", "Required element is missing.", expression))
+    elif CONTROL_CHARACTERS.search(value):
+        issues.append(Issue("value", "Must not contain control characters.", expression))
     elif len(value) > NAME_MAX_LENGTH:
         issues.append(Issue("value", f"Must be at most {NAME_MAX_LENGTH} characters.", expression))
     return value
@@ -239,7 +291,7 @@ def _birth_date(birth_date: str | None, issues: list[Issue]) -> datetime.date | 
         issues.append(Issue("value", "birthDate must be a full date (YYYY-MM-DD).", expression))
         return None
     parsed = datetime.date.fromisoformat(birth_date)
-    if parsed > datetime.date.today():
+    if parsed > timezone.localdate():
         issues.append(Issue("value", "birthDate must not be in the future.", expression))
     return parsed
 
