@@ -5,9 +5,10 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import validate_email
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 
 from accounts.models import User, normalize_email
+from accounts.services import user_create
 
 PASSWORD_ENV_VAR = "PRACTITIONER_PASSWORD"  # noqa: S105 (a variable name, not a secret)
 
@@ -55,10 +56,9 @@ class Command(BaseCommand):
             raise CommandError(" ".join(error.messages)) from error
 
         try:
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    email=email, password=password, first_name=first_name, last_name=last_name
-                )
+            user = user_create(
+                email=email, password=password, first_name=first_name, last_name=last_name
+            )
         except IntegrityError as error:
             if options["skip_existing"]:
                 self.stdout.write("Practitioner already exists, skipped.")

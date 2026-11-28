@@ -3,3 +3,7 @@ __pycache__
 .pytest_cache
 .ruff_cache
 seed_dev.sh
+.env*
+# Tests run in the dev container, from the bind mount: keep them out of the image.
+**/tests/
+conftest.py

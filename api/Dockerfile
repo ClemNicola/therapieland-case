@@ -10,18 +10,20 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
+# The app user owns only the venv: the code stays root-owned (read-only for the app),
+# so a compromised process can't rewrite it.
 RUN useradd --create-home --uid 1000 app \
     && mkdir /code /opt/venv \
-    && chown app:app /code /opt/venv
+    && chown app:app /opt/venv
 USER app
 WORKDIR /code
 
 # DEV=true installs the dev dependency group (pytest, ruff). Production images use the default.
 ARG DEV=false
-COPY --chown=app:app pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock ./
 RUN if [ "$DEV" = "true" ]; then uv sync --frozen; else uv sync --frozen --no-dev; fi
 
-COPY --chown=app:app . .
+COPY . .
 
 EXPOSE 8000
 CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--workers", "3", "--access-logfile", "-"]

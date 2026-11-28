@@ -1,16 +1,20 @@
+import logging
+import traceback
 import uuid
 
+from django.core.exceptions import RequestDataTooBig
 from django.http import Http404
 from django.urls import reverse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import exceptions, status, viewsets
-from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
+from rest_framework.views import set_rollback
 
+from config.parsers import JSONParser
 from patients.fhir import FhirInputError, Issue, operation_outcome, patient_bundle
 from patients.models import Patient
 from patients.selectors import patient_get, patient_list
@@ -20,6 +24,8 @@ from patients.serializers import (
     PatientSerializer,
 )
 from patients.services import patient_archive, patient_create, patient_update
+
+logger = logging.getLogger(__name__)
 
 FHIR_JSON = "application/fhir+json"
 
@@ -53,14 +59,32 @@ def fhir_exception_handler(exc: Exception, context: dict) -> Response | None:
     """Renders every API error of the patient endpoints as a FHIR OperationOutcome."""
     if isinstance(exc, FhirInputError):
         return Response(operation_outcome(exc.issues), status=status.HTTP_400_BAD_REQUEST)
-    if isinstance(exc, Http404):
+    if isinstance(exc, Http404 | Patient.DoesNotExist):
         exc = exceptions.NotFound()
+    if isinstance(exc, RequestDataTooBig):
+        return Response(
+            operation_outcome([Issue("too-costly", "The body is too large.")]),
+            status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        )
 
     response = drf_exception_handler(exc, context)  # status + headers (WWW-Authenticate, Allow)
     if response is None:
-        return None  # unexpected error: generic 500 from Django, no details leaked
+        return _unexpected_error(exc, context)
     response.data = operation_outcome([_issue_for(exc)])
     return response
+
+
+def _unexpected_error(exc: Exception, context: dict) -> Response:
+    """A generic 500 OperationOutcome. The log keeps the exception type and stack trace for
+    debugging, but not the message: library messages can quote values (PHI)."""
+    stack = "".join(traceback.format_tb(exc.__traceback__))
+    view = type(context["view"]).__name__
+    logger.error("Unhandled %s in %s\n%s", type(exc).__name__, view, stack)
+    set_rollback()
+    return Response(
+        operation_outcome([Issue("exception", "Internal server error.")]),
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
 
 
 def _issue_for(exc: Exception) -> Issue:
@@ -134,7 +158,7 @@ class PatientViewSet(viewsets.ViewSet):
         patient = self._get_patient(request, pk)
         serializer = PatientSerializer(data=request.data, context={"expected_id": str(patient.id)})
         serializer.is_valid(raise_exception=True)
-        patient = patient_update(patient=patient, data=serializer.validated_data)
+        patient = patient_update(user=request.user, patient=patient, data=serializer.validated_data)
         return Response(PatientSerializer(patient).data)
 
     @extend_schema(

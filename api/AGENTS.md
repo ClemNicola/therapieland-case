@@ -81,8 +81,12 @@ Patient data is exposed as **FHIR R4** resources, built and validated with `fhir
 - Errors of FHIR endpoints are `OperationOutcome`s (`patients.views.fhir_exception_handler`): a FHIR
   issue code, the element path in `expression`, and a fixed message. Never pass library error text
   (pydantic, DRF) through: it can contain submitted values. Only known element names go in `expression`.
+  Unexpected errors are a generic 500 OperationOutcome; the log keeps the exception type and stack
+  trace, never the message.
 - `DELETE` on a patient = the practitioner stops following it; archived when nobody follows it.
   Patients are never hard-deleted.
+- Writes re-read the patient under a row lock, still scoped to the user (`select_for_update`), and
+  save only the submitted fields: a concurrent request may have changed it since the view loaded it.
 
 ## Tests (TDD)
 

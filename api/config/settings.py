@@ -165,13 +165,16 @@ LOGGING = {
 
 # --- Django REST Framework ----------------------------------------------------
 
+# JSON bodies here are small (a patient is ~1 KB): reject anything over 100 KB early.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100_000
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["accounts.authentication.SessionAuthentication"],
     # Everything is denied by default: public endpoints must opt out explicitly.
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     # JSON only: no browsable HTML API, no form/multipart parsing.
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "DEFAULT_PARSER_CLASSES": ["config.parsers.JSONParser"],
     # Content negotiation only via the Accept header: no `?format=` query parameter.
     "URL_FORMAT_OVERRIDE": None,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
