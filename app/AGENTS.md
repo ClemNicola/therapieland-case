@@ -11,9 +11,9 @@ The developer comes from NestJS/Java: explain React idioms briefly when they are
 |------|----------|
 | `src/routes.tsx` | The route table (React Router). |
 | `src/pages/<route>/` | One folder per route: `auth/` (login), `patients/`. The page component and what only it uses. |
-| `src/components/` | Shared UI: `ProtectedRoute` (the `/me` guard), `AppLayout` (signed-in shell), `SearchInput`, `DataTable` (renders any TanStack table). |
+| `src/components/` | Shared UI: `ProtectedRoute` (the `/me` guard), `AppLayout` (signed-in shell), `SearchInput`, `DataTable` (renders any TanStack table), `Dialog` (native modal `<dialog>`), `TextField`. |
 | `src/hooks/` | Shared hooks. |
-| `src/lib/` | Plain helpers, e.g. the FHIR ↔ form mapping. |
+| `src/lib/` | Plain helpers: `patientFhir` (FHIR → rows, dates, search), `patientForm` (form schema, form → FHIR, OperationOutcome → fields). |
 | `src/api/generated/` | Orval output (hooks, types, Zod schemas). Gitignored, regenerated before dev/build/test/typecheck. **Never edit.** |
 | `src/api/client.ts` | The only hand-written `fetch` (Orval mutator): session cookie, CSRF header, `ApiError`. |
 | `src/api/queryClient.ts` | The TanStack Query client: in-memory cache, retry policy, global 401 handling. |
