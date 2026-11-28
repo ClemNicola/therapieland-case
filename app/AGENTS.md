@@ -9,12 +9,24 @@ The developer comes from NestJS/Java: explain React idioms briefly when they are
 
 | Path | Contents |
 |------|----------|
+| `src/routes.tsx` | The route table (React Router). |
+| `src/pages/<route>/` | One folder per route: `auth/` (login), `patients/`. The page component and what only it uses. |
+| `src/components/` | Shared UI, including `ProtectedRoute` (the `/me` guard) and `AppLayout` (signed-in shell). |
+| `src/hooks/` | Shared hooks. |
+| `src/lib/` | Plain helpers, e.g. the FHIR ↔ form mapping. |
 | `src/api/generated/` | Orval output (hooks, types, Zod schemas). Gitignored, regenerated before dev/build/test/typecheck. **Never edit.** |
 | `src/api/client.ts` | The only hand-written `fetch` (Orval mutator): session cookie, CSRF header, `ApiError`. |
-| `src/<feature>/` | One folder per feature (`auth/`, `patients/`): components, hooks, tests. |
-| `src/ui/` | Shared presentational components, only once two features need them. |
+| `src/api/queryClient.ts` | The TanStack Query client: in-memory cache, retry policy, global 401 handling. |
 
-Tests sit next to the code: `Foo.tsx` → `Foo.test.tsx`. Create a file or folder only when it has content.
+Create a folder only when it has code in it. Tests sit next to the code: `Foo.tsx` → `Foo.test.tsx`.
+
+## Routing
+
+React Router (`react-router`; since v7 it includes what `react-router-dom` provided).
+- `/login` is public. `/patients` (and every future signed-in page) sits under `ProtectedRoute`,
+  which checks `/me`: loading, 401 → `/login`, other errors → retry screen.
+- `/` and unknown paths redirect to `/patients`. After login, go to `/patients`.
+- Paths hold UUIDs at most: never search terms, filters or patient data.
 
 ## API
 
@@ -27,7 +39,8 @@ Tests sit next to the code: `Foo.tsx` → `Foo.test.tsx`. Create a file or folde
 - HTTP errors reject with `ApiError` (`status`, parsed `body`). On `/api/patients/` the body is a FHIR
   `OperationOutcome`: show `issue[].diagnostics`, map `issue[].expression` to form fields. Never show
   raw error text or stack traces.
-- `401` means "log in again": clear the query cache and show the login screen.
+- `401` means "log in again": handled once, globally, in `src/api/queryClient.ts` (removes every
+  cached query, then `main.tsx` redirects to `/login`). Screens never handle it.
 - After any API change: `make schema`.
 
 ## Privacy

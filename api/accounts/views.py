@@ -3,7 +3,7 @@ import logging
 from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.views.decorators.csrf import ensure_csrf_cookie
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
@@ -35,7 +35,15 @@ def csrf(request: Request) -> Response:
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-@extend_schema(operation_id="login", request=LoginSerializer, responses={200: UserSerializer})
+@extend_schema(
+    operation_id="login",
+    request=LoginSerializer,
+    responses={
+        200: UserSerializer,
+        400: OpenApiResponse(description="Invalid email or password (one generic error)."),
+        429: OpenApiResponse(description="Too many login attempts from this IP."),
+    },
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 @throttle_classes([LoginRateThrottle])

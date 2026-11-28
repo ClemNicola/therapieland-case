@@ -1,1 +1,23 @@
 @import 'tailwindcss';
+
+/* Design tokens: a calm clinical palette (all text pairs meet WCAG AA on mist). */
+@theme {
+  --color-mist: #f5f7f6;
+  --color-ink: #1d2b2a;
+  --color-muted: #52615f;
+  --color-pine: #2f5d57;
+  --color-pine-dark: #244a45;
+  --color-line: #d5ddd9;
+  --color-brick: #9f2d20;
+}
+
+@layer base {
+  body {
+    @apply min-h-svh bg-mist text-ink antialiased;
+    border-top: 4px solid var(--color-pine);
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-pine;
+  }
+}
