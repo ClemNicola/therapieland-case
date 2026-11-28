@@ -27,6 +27,8 @@ export function stubApi(initial: Record<string, Reply>) {
       document.cookie = 'csrftoken=test-csrf-token; path=/'
       return new Response(null, { status: 204 })
     },
+    // Signed-in pages load the patient list: by default, a practitioner without patients.
+    'GET /api/patients/': () => Response.json(patientBundle()),
     ...initial,
   }
   const fetchMock = vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -67,4 +69,73 @@ export function requestsTo(fetchMock: ReturnType<typeof stubApi>['fetchMock'], k
   return fetchMock.mock.calls.filter(
     ([url, init]) => `${(init?.method ?? 'GET').toUpperCase()} ${url}` === key,
   )
+}
+
+// --- Patients (FHIR R4) -------------------------------------------------------------
+
+type PatientFixture = {
+  id: string
+  family: string
+  given: string
+  gender?: 'male' | 'female' | 'other' | 'unknown'
+  birthDate?: string
+  phone?: string
+  email?: string
+}
+
+/** A FHIR Patient resource as the API returns it (fake data only). */
+export function patientResource({
+  id,
+  family,
+  given,
+  gender = 'female',
+  birthDate = '1980-05-17',
+  phone,
+  email,
+}: PatientFixture) {
+  const telecom = [
+    ...(phone ? [{ system: 'phone', value: phone }] : []),
+    ...(email ? [{ system: 'email', value: email }] : []),
+  ]
+  return {
+    resourceType: 'Patient',
+    id,
+    meta: { lastUpdated: '2026-01-01T00:00:00Z' },
+    active: true,
+    name: [{ use: 'official', family, given: [given] }],
+    ...(telecom.length ? { telecom } : {}),
+    gender,
+    birthDate,
+  }
+}
+
+/** A FHIR searchset Bundle, like GET /api/patients/. */
+export function patientBundle(...patients: ReturnType<typeof patientResource>[]) {
+  return {
+    resourceType: 'Bundle',
+    type: 'searchset',
+    total: patients.length,
+    ...(patients.length
+      ? {
+          entry: patients.map((resource) => ({
+            fullUrl: `http://localhost/api/patients/${resource.id}/`,
+            resource,
+          })),
+        }
+      : {}),
+  }
+}
+
+/** Pretends the viewport is a phone or a larger screen (see useMediaQuery). */
+export function setScreen(size: 'mobile' | 'desktop') {
+  window.matchMedia = ((query: string) => ({
+    matches: size === 'desktop' && query.includes('min-width'),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia
 }

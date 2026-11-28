@@ -33,3 +33,12 @@ def test_committed_schema_is_up_to_date(tmp_path):
     call_command("spectacular", "--file", str(generated), "--fail-on-warn")
 
     assert COMMITTED_SCHEMA.read_text() == generated.read_text()
+
+
+def test_patient_list_is_one_bundle_not_an_array(client):
+    """GET /api/patients/ returns one FHIR Bundle: the schema must not wrap it in an array."""
+    schema = client.get("/api/schema/", HTTP_ACCEPT="application/vnd.oai.openapi+json").json()
+    content = schema["paths"]["/api/patients/"]["get"]["responses"]["200"]["content"]
+
+    for media_type in content.values():
+        assert media_type["schema"] == {"$ref": "#/components/schemas/PatientBundle"}

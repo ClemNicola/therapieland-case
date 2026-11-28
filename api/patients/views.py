@@ -5,6 +5,7 @@ import uuid
 from django.core.exceptions import RequestDataTooBig
 from django.http import Http404
 from django.urls import reverse
+from drf_spectacular.openapi import AutoSchema
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import exceptions, status, viewsets
@@ -107,8 +108,17 @@ ERRORS = {
 }
 
 
+class PatientSchema(AutoSchema):
+    """drf-spectacular wraps every `list` action in a JSON array: ours returns one FHIR Bundle."""
+
+    def _is_list_view(self, serializer=None) -> bool:
+        return False
+
+
 class PatientViewSet(viewsets.ViewSet):
     """Patients as FHIR R4 resources, scoped to the logged-in practitioner."""
+
+    schema = PatientSchema()
 
     renderer_classes = [FhirJSONRenderer, JSONRenderer]
     parser_classes = [FhirJSONParser, JSONParser]
