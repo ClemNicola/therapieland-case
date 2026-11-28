@@ -8,7 +8,8 @@ layers as possible, production-level security, privacy and tests.**
 
 - `api/`: Django + DRF backend. **Backend rules (architecture, security, FHIR, TDD) live in
   [`api/AGENTS.md`](api/AGENTS.md).**
-- `app/`: Vite + React 19 (React Compiler) + TypeScript + Tailwind 4 + TanStack Query + Zod + Orval
+- `app/`: Vite + React 19 (React Compiler) + TypeScript + Tailwind 4 + TanStack Query + Zod + Orval.
+  **Frontend rules (API client, privacy, UI, forms, TDD) live in [`app/AGENTS.md`](app/AGENTS.md).**
 - `docker-compose.yml`: db (PostgreSQL 18), api, app for local development
 
 The developer comes from NestJS/Java and is new to Python and Django. When they use NestJS terms,
@@ -30,19 +31,10 @@ Planned, one step at a time. Build only what the current step asks for; don't an
   (gitignored, regenerated before `dev`, `build`, `test` and `typecheck`).
 - After any API change: `make schema`.
 - The Vite dev server proxies `/api` to Django: one origin, so no CORS.
-- Auth is a session cookie (HttpOnly). Before any unsafe request, the frontend calls `GET /api/auth/csrf/`
-  once and sends the `csrftoken` cookie value as the `X-CSRFToken` header. `401` means "log in again".
-- Patients are FHIR R4 resources (`/api/patients/`): list = FHIR `Bundle`, errors = FHIR
-  `OperationOutcome` (show `issue[].diagnostics`, map `issue[].expression` to form fields).
+- Auth is a session cookie (HttpOnly). Unsafe requests carry the `csrftoken` cookie value as the
+  `X-CSRFToken` header (`GET /api/auth/csrf/` sets it). `401` means "log in again".
+- Patients are FHIR R4 resources (`/api/patients/`): list = FHIR `Bundle`, errors = FHIR `OperationOutcome`.
 - Local demo accounts and patients (seeded by `make up`): see the README.
-
-## Frontend conventions
-
-- **Never hand-write API types, fetch calls or routes.** Use the generated hooks and types.
-- Use Zod for client-side validation, preferring the generated schemas (`endpoints.zod.ts`).
-- Tailwind only, mobile first: base classes target small screens; add `md:`/`lg:` for larger ones.
-- Don't add `useMemo`/`useCallback`/`memo` by hand: the React Compiler handles memoization.
-- Tests use Vitest + Testing Library: query by role or text, and stub `fetch` at the boundary.
 
 ## General
 
