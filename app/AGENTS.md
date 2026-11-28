@@ -61,6 +61,10 @@ React Router (`react-router`; since v7 it includes what `react-router-dom` provi
 - Accessible: semantic elements, a `<label>` for every input, errors linked with `aria-describedby`
   and announced (`role="alert"` / `aria-live`), visible focus, everything usable with the keyboard,
   AA contrast, touch targets ≥ 44px.
+- Every clickable element shows `cursor: pointer` and a visible focus state. Both come from the base
+  styles in `index.css` (buttons, links, radios, checkboxes, their labels, `role="button"`); never
+  remove the focus ring (`outline-none`) on an interactive element. Clickable means a real `<button>`
+  or `<a href>`, not an `onClick` on a `<div>`.
 - No hand-written `useMemo`/`useCallback`/`memo`: the React Compiler memoizes.
 
 **Lists**: TanStack Table (headless), driven by the generated query data. Search, sort and filter are
@@ -93,3 +97,8 @@ make npm cmd="install <pkg>"      # dependencies, then `make up` to rebuild
 ```
 
 Before considering work done: `make test`, `make lint`, `make typecheck`.
+
+**Enforced automatically**: a Claude Code hook (`.claude/settings.json` →
+`.claude/hooks/check-app.sh`) runs oxlint + `tsc` after every Edit/Write of a file under `app/` and
+feeds failures back; fix them before moving on. It only sees the Edit/Write tools: edit `app/` files
+with them, not with shell commands.
