@@ -11,6 +11,7 @@ The developer comes from NestJS/Java: explain React idioms briefly when they are
 |------|----------|
 | `src/api/generated/` | Orval output (hooks, types, Zod schemas). Gitignored, regenerated before dev/build/test/typecheck. **Never edit.** |
 | `src/api/client.ts` | The only hand-written `fetch` (Orval mutator): session cookie, CSRF header, `ApiError`. |
+| `src/api/queryClient.ts` | The TanStack Query client: in-memory cache, retry policy, global 401 handling. |
 | `src/<feature>/` | One folder per feature (`auth/`, `patients/`): components, hooks, tests. |
 | `src/ui/` | Shared presentational components, only once two features need them. |
 
@@ -27,7 +28,8 @@ Tests sit next to the code: `Foo.tsx` → `Foo.test.tsx`. Create a file or folde
 - HTTP errors reject with `ApiError` (`status`, parsed `body`). On `/api/patients/` the body is a FHIR
   `OperationOutcome`: show `issue[].diagnostics`, map `issue[].expression` to form fields. Never show
   raw error text or stack traces.
-- `401` means "log in again": clear the query cache and show the login screen.
+- `401` means "log in again": handled once, globally, in `src/api/queryClient.ts` (removes every
+  cached query, re-checks `/me`, and `auth/AuthGate` shows the login form). Screens never handle it.
 - After any API change: `make schema`.
 
 ## Privacy

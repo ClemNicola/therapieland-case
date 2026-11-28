@@ -1,15 +1,26 @@
-import { useGetHealth } from './api/generated/endpoints'
+import { AuthGate } from './auth/AuthGate'
+import { LogoutButton } from './auth/LogoutButton'
 
 export default function App() {
-  const { data, isPending, isError } = useGetHealth()
-  const apiStatus = isPending ? 'checking…' : isError ? 'unreachable' : data.data.status
-
   return (
-    <main className="mx-auto flex min-h-svh max-w-md flex-col justify-center gap-4 p-6 md:max-w-2xl">
-      <h1 className="text-2xl font-semibold text-slate-900 md:text-3xl">Patient Management</h1>
-      <p className="text-slate-600">
-        API status: <span className="font-medium text-slate-900">{apiStatus}</span>
-      </p>
-    </main>
+    <AuthGate>
+      {(user) => (
+        <>
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-3 md:px-[12vw]">
+            <p className="font-semibold text-pine">Patient Management</p>
+            <div className="flex items-center gap-4">
+              <p className="text-muted">
+                {user.first_name} {user.last_name}
+              </p>
+              <LogoutButton />
+            </div>
+          </header>
+          <main className="px-6 pt-10 md:px-[12vw]">
+            <h1 className="text-3xl font-semibold tracking-tight">Patients</h1>
+            <p className="mt-2 text-muted">Your patient list comes in the next step.</p>
+          </main>
+        </>
+      )}
+    </AuthGate>
   )
 }

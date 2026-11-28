@@ -38,6 +38,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+        '400':
+          description: Invalid email or password (one generic error).
+        '429':
+          description: Too many login attempts from this IP.
   /api/auth/logout/:
     post:
       operationId: logout
