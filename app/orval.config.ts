@@ -13,6 +13,8 @@ export default defineConfig({
       client: 'react-query',
       httpClient: 'fetch',
       clean: true,
+      // Every request goes through our fetch: session cookie, CSRF header, ApiError.
+      override: { mutator: { path: './src/api/client.ts', name: 'customFetch' } },
     },
   },
   zod: {

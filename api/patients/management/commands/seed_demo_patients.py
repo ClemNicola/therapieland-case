@@ -31,9 +31,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         try:
-            practitioners = {
-                email: user_get_by_email(email=email) for email in (ALICE, BOB)
-            }
+            practitioners = {email: user_get_by_email(email=email) for email in (ALICE, BOB)}
         except User.DoesNotExist as error:
             raise CommandError("Create the demo practitioners first.") from error
 

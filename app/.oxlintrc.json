@@ -1,8 +1,63 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
+  "plugins": [
+    "react",
+    "typescript",
+    "oxc"
+  ],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowConstantExport": true
+      }
+    ],
+    "no-console": "error",
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "localStorage",
+        "message": "No browser storage: patient data stays in memory."
+      },
+      {
+        "name": "sessionStorage",
+        "message": "No browser storage: patient data stays in memory."
+      },
+      {
+        "name": "indexedDB",
+        "message": "No browser storage: patient data stays in memory."
+      },
+      {
+        "name": "fetch",
+        "message": "Use the generated hooks (src/api/client.ts is the only fetch)."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/api/client.ts",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+      ],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "localStorage",
+            "message": "No browser storage: patient data stays in memory."
+          },
+          {
+            "name": "sessionStorage",
+            "message": "No browser storage: patient data stays in memory."
+          },
+          {
+            "name": "indexedDB",
+            "message": "No browser storage: patient data stays in memory."
+          }
+        ]
+      }
+    }
+  ]
 }

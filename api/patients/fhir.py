@@ -129,9 +129,7 @@ def patient_from_fhir(data: Any, *, expected_id: str | None = None) -> dict[str,
     if isinstance(resource.get("meta"), dict):
         issues += _check_meta(resource["meta"])
         resource["meta"] = {
-            key: value
-            for key, value in resource["meta"].items()
-            if key in SUPPORTED_META_ELEMENTS
+            key: value for key, value in resource["meta"].items() if key in SUPPORTED_META_ELEMENTS
         }
     invalid_elements = set()
     try:
