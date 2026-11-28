@@ -34,7 +34,6 @@ class Patient(models.Model):
     gender = models.CharField(max_length=7, choices=Gender.choices)
     phone = models.CharField(max_length=32, blank=True)
     email = models.EmailField(blank=True)
-    # Archive instead of deleting: medical records have legal retention periods.
     active = models.BooleanField(default=True)
     # The practitioners following this patient (and allowed to access the record).
     practitioners = models.ManyToManyField(

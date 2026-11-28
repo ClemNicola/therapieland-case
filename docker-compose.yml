@@ -38,12 +38,7 @@ services:
       - |
         python manage.py migrate --noinput
         python manage.py createcachetable
-        # LOCAL DEV ONLY: fake practitioner accounts for reviewers (idempotent, see README).
-        PRACTITIONER_PASSWORD=alice-local-dev-only python manage.py create_practitioner \
-          --no-input --skip-existing --email alice@example.com --first-name Alice --last-name Martin
-        PRACTITIONER_PASSWORD=bob-local-dev-only python manage.py create_practitioner \
-          --no-input --skip-existing --email bob@example.com --first-name Bob --last-name Janssen
-        python manage.py seed_demo_patients
+        sh seed_dev.sh  # LOCAL DEV ONLY: demo accounts and patients (idempotent)
         exec python manage.py runserver 0.0.0.0:8000
     environment:
       DJANGO_SECRET_KEY: dev-only-insecure-secret-key-change-me-in-any-real-environment

@@ -17,7 +17,7 @@ app (`python manage.py startapp <name>`), e.g. `patients/`, with one file per re
 | `models.py` | Model (entity) | Fields, DB constraints, `TextChoices`. No business logic. |
 | `serializers.py` | Serializer (DTO + validation) | Validates input, shapes output. Never writes to the DB: hands validated data to a service. |
 | `views.py` | ViewSet / API view (controller) | HTTP only: permissions, call a selector or service, serialize the result. No ORM calls. |
-| `services.py` | Services (service) | Plain functions for writes and business rules. Own transactions (`transaction.atomic`) and audit logging. |
+| `services.py` | Services (service) | Plain functions for writes and business rules. Own transactions (`transaction.atomic`). |
 | `selectors.py` | Selectors (DAO) | Plain functions for reads, built on the ORM. Always scoped to what the requesting user may access. |
 | `fhir.py` | FHIR mapping | Model ↔ FHIR resource conversion (see FHIR). |
 | `urls.py` | Routes | DRF router, included from `config/urls.py`. |
@@ -60,10 +60,6 @@ app (`python manage.py startapp <name>`), e.g. `patients/`, with one file per re
 - Error responses are generic and never echo submitted values back.
 - Store only the fields the product needs (data minimization). Adding a PHI field is a product decision,
   not an implementation detail.
-
-**Audit trail**
-- Every create, read, update and delete of patient data records who (user), what (resource type + UUID),
-  which action and when. Written by services/selectors, never skippable, never contains PHI values.
 
 **General**
 - Secrets only from environment variables (`config/settings.py` reads them, fails if missing).
@@ -116,6 +112,7 @@ make lint / make format           # ruff
 make schema                       # export openapi.yaml + regenerate the frontend client
 make makemigrations / make migrate
 make shell                        # Django shell
+make seed                         # demo practitioners + patients (idempotent, dev only)
 make create-practitioner          # create an account (interactive)
 make manage cmd="…"               # any manage.py command
 make uv cmd="add <pkg>"           # dependencies, then `make up` to rebuild

@@ -29,7 +29,8 @@ make down    # stop (keeps data). `make reset` also deletes the database volume.
 
 ### Demo accounts (local dev only)
 
-`make up` seeds two fake practitioner accounts (idempotent: existing accounts are left untouched):
+`make up` seeds two fake practitioner accounts (idempotent: existing accounts are left untouched).
+Run `make seed` to seed them again at any time, e.g. after deleting demo data:
 
 | Email | Password |
 |-------|----------|
@@ -53,6 +54,7 @@ All commands run inside the containers (start the stack with `make up` first).
 | `make lint` / `format` / `typecheck` | Ruff (lint + format), Oxlint, `tsc` |
 | `make schema` | Export the OpenAPI schema from Django, then regenerate the frontend client |
 | `make migrate` / `makemigrations` / `shell` | Django database and shell |
+| `make seed` | Seed the demo practitioners and patients (idempotent, local dev only) |
 | `make create-practitioner` | Create a practitioner account (there is no public signup) |
 | `make check-deploy` | Django production-readiness checks |
 | `make manage cmd="…"` | Any `manage.py` command |
@@ -139,9 +141,9 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
   client-side search, and requires key management. Data at rest is protected at the infrastructure
   level (encrypted disks and backups), in transit by TLS (`POSTGRES_SSLMODE`), and in the app by
   access control.
-- **Demo accounts with known passwords are seeded by `docker-compose.yml`.** Reviewers can log in
-  right away. This is local dev only: the seeding lives in the Compose command, not in the image, so a
-  production deployment never creates these accounts.
+- **Demo accounts with known passwords are seeded on `make up`.** Reviewers can log in right away.
+  This is local dev only: the seed script (`api/seed_dev.sh`) is run by the Compose command and
+  `make seed`, and is excluded from the image, so a production deployment never creates these accounts.
 - **Rate limiting instead of account lockout.** Locking an account after N failures stops slow,
   distributed attacks on one account, but it also lets anyone lock a practitioner out. In production,
   **two-factor authentication** is the better protection for health data: a stolen or guessed password
@@ -166,6 +168,11 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
 - **Archived patients return `404`**, not FHIR's `410 Gone`, and there is no restore endpoint yet.
 - **No `PATCH`**: updates replace the whole resource (`PUT`), which a FHIR client does by default.
 - **One name, one phone and one email per patient** (data minimization; FHIR allows lists).
+
+## Next steps
+
+- **Audit trail of patient data access**: record who created, read, updated or deleted which patient,
+  and when (IDs only, no PHI), append-only and written in the same transaction as the change.
 
 ## Environment variables (api)
 
