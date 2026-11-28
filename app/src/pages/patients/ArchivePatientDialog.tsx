@@ -3,17 +3,18 @@ import { ApiError } from '../../api/client'
 import { getListPatientsQueryKey, useDeletePatient } from '../../api/generated/endpoints'
 import { Dialog } from '../../components/Dialog'
 import { fullName, type PatientRow } from '../../lib/patientFhir'
-import { PATIENT_GONE } from './messages'
 
 /** Confirms DELETE /api/patients/{id}/: the practitioner stops following the patient. */
 export function ArchivePatientDialog({
   patient,
   onClose,
   onDone,
+  onGone,
 }: {
   patient: PatientRow
   onClose: () => void
   onDone: (message: string) => void
+  onGone: () => void // 404: archived or unfollowed elsewhere
 }) {
   const queryClient = useQueryClient()
   const remove = useDeletePatient()
@@ -26,7 +27,7 @@ export function ArchivePatientDialog({
     } catch (error) {
       if (!(error instanceof ApiError && error.status === 404)) return
       await refreshList()
-      return onDone(PATIENT_GONE)
+      return onGone()
     }
     await refreshList()
     onDone(`You no longer follow ${name}.`)

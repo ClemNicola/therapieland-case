@@ -22,17 +22,18 @@ import {
   type PatientFormData,
   type PatientFormValues,
 } from '../../lib/patientForm'
-import { PATIENT_GONE } from './messages'
 
 /** Add a patient (no `patient`) or edit one. `onDone` closes the dialog with a message. */
 export function PatientFormDialog({
   patient,
   onClose,
   onDone,
+  onGone,
 }: {
   patient?: PatientRow
   onClose: () => void
   onDone: (message: string) => void
+  onGone: () => void // 404: archived or unfollowed elsewhere
 }) {
   const queryClient = useQueryClient()
   const create = useCreatePatient()
@@ -59,7 +60,7 @@ export function PatientFormDialog({
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         await refreshList() // archived or unfollowed elsewhere
-        return onDone(PATIENT_GONE)
+        return onGone()
       }
       if (error instanceof ApiError && error.status === 400) {
         const { fields, form } = issuesToFormErrors(error.body, resource)

@@ -7,6 +7,7 @@ import {
   patientBundle,
   patientResource,
   renderApp,
+  byTextContent,
   requestsTo,
   setScreen,
   stubApi,
@@ -74,7 +75,7 @@ test('adds a patient as a FHIR resource and shows it in the list', async () => {
 
   expect(await screen.findByText('Jane Doe')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(screen.getByText('Jane Doe added.')).toBeInTheDocument()
+  expect(screen.getByText(byTextContent('Last change: Jane Doe added.'))).toBeInTheDocument()
   expect(bodyOf(fetchMock, CREATE)).toEqual({
     resourceType: 'Patient',
     name: [{ use: 'official', family: 'Doe', given: ['Jane'] }],
@@ -174,7 +175,7 @@ test('edits a patient: form filled in, the whole resource replaced (PUT)', async
   await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
 
   expect(await screen.findByText('Adam Abbot')).toBeInTheDocument()
-  expect(screen.getByText('Adam Abbot updated.')).toBeInTheDocument()
+  expect(screen.getByText(byTextContent('Last change: Adam Abbot updated.'))).toBeInTheDocument()
   expect(bodyOf(fetchMock, `PUT ${ADAM_URL}`)).toEqual({
     resourceType: 'Patient',
     name: [{ use: 'official', family: 'Abbot', given: ['Adam'] }],
@@ -232,7 +233,7 @@ test('stopping to follow a patient asks first, then removes them from the list',
   expect(dialog).toHaveTextContent('archived')
   await user.click(within(dialog).getByRole('button', { name: 'Stop following' }))
 
-  expect(await screen.findByText('You no longer follow Adam Abbott.')).toBeInTheDocument()
+  expect(await screen.findByText(byTextContent('Last change: You no longer follow Adam Abbott.'))).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(await screen.findByText('No patients yet.')).toBeInTheDocument()
   expect(requestsTo(fetchMock, `DELETE ${ADAM_URL}`)).toHaveLength(1)
