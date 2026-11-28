@@ -1,6 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, beforeEach } from 'vitest'
+
+// jsdom has no matchMedia: default to a larger screen (tests switch with setScreen()).
+beforeEach(() => {
+  window.matchMedia = ((media: string) => ({
+    matches: media.includes('min-width'),
+    media,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  })) as unknown as typeof window.matchMedia
+})
 
 afterEach(() => {
   cleanup()

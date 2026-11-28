@@ -11,7 +11,7 @@ The developer comes from NestJS/Java: explain React idioms briefly when they are
 |------|----------|
 | `src/routes.tsx` | The route table (React Router). |
 | `src/pages/<route>/` | One folder per route: `auth/` (login), `patients/`. The page component and what only it uses. |
-| `src/components/` | Shared UI, including `ProtectedRoute` (the `/me` guard) and `AppLayout` (signed-in shell). |
+| `src/components/` | Shared UI: `ProtectedRoute` (the `/me` guard), `AppLayout` (signed-in shell), `SearchInput`, `DataTable` (renders any TanStack table). |
 | `src/hooks/` | Shared hooks. |
 | `src/lib/` | Plain helpers, e.g. the FHIR ↔ form mapping. |
 | `src/api/generated/` | Orval output (hooks, types, Zod schemas). Gitignored, regenerated before dev/build/test/typecheck. **Never edit.** |
@@ -64,7 +64,9 @@ React Router (`react-router`; since v7 it includes what `react-router-dom` provi
 - No hand-written `useMemo`/`useCallback`/`memo`: the React Compiler memoizes.
 
 **Lists**: TanStack Table (headless), driven by the generated query data. Search, sort and filter are
-client side.
+client side. Features and columns live at module scope (`pages/<route>/…Columns.tsx`); render tables
+with `components/DataTable`, passing `rows={table.getRowModel().rows}` (the `table` instance keeps its
+identity, so the React Compiler would skip a child that only receives it).
 
 **Forms**: react-hook-form with `zodResolver` (`@hookform/resolvers/zod`). Prefer the generated Zod
 schemas (`endpoints.zod.ts`); extend them only for UI-only rules. Map server `OperationOutcome`

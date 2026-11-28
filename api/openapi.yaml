@@ -105,14 +105,10 @@ paths:
           content:
             application/fhir+json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PatientBundle'
+                $ref: '#/components/schemas/PatientBundle'
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/PatientBundle'
+                $ref: '#/components/schemas/PatientBundle'
           description: ''
         '401':
           content:
