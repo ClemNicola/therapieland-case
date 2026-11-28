@@ -1,73 +1,74 @@
-import { QueryObserver } from '@tanstack/react-query'
 import { expect, test, vi } from 'vitest'
-import { getGetMeQueryKey } from './generated/endpoints'
 import { ApiError } from './client'
+import { getGetMeQueryKey } from './generated/endpoints'
 import { createQueryClient } from './queryClient'
 
 const ME = getGetMeQueryKey()
 const PATIENTS = ['/api/patients/']
+const unauthorized = () => Promise.reject(new ApiError(401, undefined))
 
-test('a 401 on any query removes every cached query and re-checks the session', async () => {
-  const queryClient = createQueryClient({ retryDelay: 0 })
-  const meQueryFn = vi.fn().mockRejectedValue(new ApiError(401, undefined))
+function setup() {
+  const onUnauthenticated = vi.fn()
+  const queryClient = createQueryClient({ onUnauthenticated, queryDefaults: { retryDelay: 0 } })
   queryClient.setQueryData(ME, { data: { first_name: 'Alice' } })
   queryClient.setQueryData(['/api/patients/other/'], { data: 'fake patient' })
-  // The /me query is active: the auth guard observes it (fresh, so it doesn't refetch now).
-  const unsubscribe = new QueryObserver(queryClient, {
-    queryKey: ME,
-    queryFn: meQueryFn,
-    staleTime: Infinity,
-  }).subscribe(() => {})
-  expect(meQueryFn).not.toHaveBeenCalled()
+  return { queryClient, onUnauthenticated }
+}
 
-  await queryClient
-    .fetchQuery({ queryKey: PATIENTS, queryFn: () => Promise.reject(new ApiError(401, undefined)) })
-    .catch(() => {})
+function nothingCached(queryClient: ReturnType<typeof createQueryClient>) {
+  return queryClient.getQueryCache().getAll().every((query) => query.state.data === undefined)
+}
 
-  await vi.waitFor(() => expect(meQueryFn).toHaveBeenCalled())
-  expect(queryClient.getQueryData(PATIENTS)).toBeUndefined()
-  expect(queryClient.getQueryData(['/api/patients/other/'])).toBeUndefined()
-  expect(queryClient.getQueryData(ME)).toBeUndefined()
-  unsubscribe()
+test('a 401 on any query empties the cache and redirects to login', async () => {
+  const { queryClient, onUnauthenticated } = setup()
+
+  await queryClient.fetchQuery({ queryKey: PATIENTS, queryFn: unauthorized }).catch(() => {})
+
+  expect(onUnauthenticated).toHaveBeenCalledTimes(1)
+  expect(nothingCached(queryClient)).toBe(true)
 })
 
-test('a 401 on the session check itself does not loop', async () => {
-  const queryClient = createQueryClient({ retryDelay: 0 })
-  const meQueryFn = vi.fn().mockRejectedValue(new ApiError(401, undefined))
-
-  await queryClient.fetchQuery({ queryKey: ME, queryFn: meQueryFn }).catch(() => {})
-  await new Promise((resolve) => setTimeout(resolve, 20))
-
-  expect(meQueryFn).toHaveBeenCalledTimes(1)
-})
-
-test('a 401 on a mutation also signs out locally', async () => {
-  const queryClient = createQueryClient({ retryDelay: 0 })
-  queryClient.setQueryData(PATIENTS, { data: 'fake patient' })
+test('a 401 on a mutation empties the cache and redirects to login', async () => {
+  const { queryClient, onUnauthenticated } = setup()
 
   await queryClient
     .getMutationCache()
-    .build(queryClient, { mutationFn: () => Promise.reject(new ApiError(401, undefined)) })
+    .build(queryClient, { mutationFn: unauthorized })
     .execute(undefined)
     .catch(() => {})
 
-  expect(queryClient.getQueryData(PATIENTS)).toBeUndefined()
+  expect(onUnauthenticated).toHaveBeenCalledTimes(1)
+  expect(nothingCached(queryClient)).toBe(true)
+})
+
+test('a 401 on the session check does not loop', async () => {
+  const { queryClient, onUnauthenticated } = setup()
+  const meQueryFn = vi.fn(unauthorized)
+
+  await queryClient.fetchQuery({ queryKey: ME, queryFn: meQueryFn, staleTime: 0 }).catch(() => {})
+  await new Promise((resolve) => setTimeout(resolve, 20))
+
+  expect(meQueryFn).toHaveBeenCalledTimes(1)
+  expect(onUnauthenticated).toHaveBeenCalledTimes(1)
 })
 
 test.each([400, 403, 404])('client errors (%i) are not retried', async (status) => {
-  const queryClient = createQueryClient({ retryDelay: 0 })
+  const { queryClient, onUnauthenticated } = setup()
   const queryFn = vi.fn().mockRejectedValue(new ApiError(status, undefined))
 
-  await queryClient.fetchQuery({ queryKey: PATIENTS, queryFn }).catch(() => {})
+  await queryClient
+    .fetchQuery({ queryKey: PATIENTS, queryFn, retry: queryClient.getDefaultOptions().queries?.retry })
+    .catch(() => {})
 
   expect(queryFn).toHaveBeenCalledTimes(1)
+  expect(onUnauthenticated).not.toHaveBeenCalled()
 })
 
 test('server and network errors are retried', async () => {
-  const queryClient = createQueryClient({ retryDelay: 0 })
+  const { queryClient } = setup()
   const queryFn = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
 
-  // fetchQuery doesn't retry by default: go through the default query options.
+  // fetchQuery doesn't retry by default: use the app's default query options.
   await queryClient
     .fetchQuery({ queryKey: PATIENTS, queryFn, retry: queryClient.getDefaultOptions().queries?.retry })
     .catch(() => {})

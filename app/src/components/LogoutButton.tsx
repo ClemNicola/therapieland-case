@@ -1,11 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router'
 import { useLogout } from '../api/generated/endpoints'
-import { signOutLocally } from '../api/queryClient'
 
 export function LogoutButton() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   // A 401 (session already gone) is handled globally by the query client.
-  const logout = useLogout({ mutation: { onSuccess: () => signOutLocally(queryClient) } })
+  const logout = useLogout({
+    mutation: {
+      onSuccess: () => {
+        queryClient.removeQueries() // no patient data left in memory
+        void navigate('/login', { replace: true })
+      },
+    },
+  })
 
   return (
     <div className="flex items-center gap-3">

@@ -1,31 +1,8 @@
-import {
-  MutationCache,
-  QueryCache,
-  QueryClient,
-  type DefaultOptions,
-  type Query,
-} from '@tanstack/react-query'
+import { MutationCache, QueryCache, QueryClient, type DefaultOptions } from '@tanstack/react-query'
 import { ApiError } from './client'
-import { getGetMeQueryKey } from './generated/endpoints'
-
-const ME_KEY = getGetMeQueryKey()
-
-function isMeQuery(query: Pick<Query, 'queryHash'>) {
-  return query.queryHash === JSON.stringify(ME_KEY)
-}
 
 function isUnauthenticated(error: unknown) {
   return error instanceof ApiError && error.status === 401
-}
-
-/**
- * Forgets everything about the session on this device: removes every cached query (patient
- * data included), then re-checks the session. The /me query answers 401 and the auth guard
- * shows the login form.
- */
-export function signOutLocally(queryClient: QueryClient) {
-  queryClient.removeQueries({ predicate: (query) => !isMeQuery(query) })
-  return queryClient.resetQueries({ queryKey: ME_KEY })
 }
 
 // 4xx won't change on retry; server and network errors might.
@@ -35,27 +12,25 @@ function retry(failureCount: number, error: unknown) {
 }
 
 /**
- * The app's TanStack Query client. The cache lives in memory only (never persisted) and is
- * emptied as soon as the session ends: any 401 signs out locally.
+ * The app's TanStack Query client. The cache lives in memory only (never persisted). Any
+ * 401 means the session is over: every cached query (patient data included) is removed and
+ * `onUnauthenticated` is called (main.tsx redirects to /login). Screens never handle 401.
  */
-export function createQueryClient(queryDefaults: DefaultOptions['queries'] = {}) {
+export function createQueryClient({
+  onUnauthenticated,
+  queryDefaults = {},
+}: {
+  onUnauthenticated: () => void
+  queryDefaults?: DefaultOptions['queries']
+}) {
+  const handleError = (error: unknown) => {
+    if (!isUnauthenticated(error)) return
+    queryClient.removeQueries()
+    onUnauthenticated()
+  }
   const queryClient: QueryClient = new QueryClient({
-    queryCache: new QueryCache({
-      onError: (error, query) => {
-        if (!isUnauthenticated(error)) return
-        if (isMeQuery(query)) {
-          // Already the session check: just make sure no other data stays cached.
-          queryClient.removeQueries({ predicate: (other) => !isMeQuery(other) })
-        } else {
-          void signOutLocally(queryClient)
-        }
-      },
-    }),
-    mutationCache: new MutationCache({
-      onError: (error) => {
-        if (isUnauthenticated(error)) void signOutLocally(queryClient)
-      },
-    }),
+    queryCache: new QueryCache({ onError: handleError }),
+    mutationCache: new MutationCache({ onError: handleError }),
     defaultOptions: { queries: { retry, ...queryDefaults } },
   })
   return queryClient

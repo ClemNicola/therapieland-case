@@ -7,13 +7,13 @@ import {
   requestsTo,
   stubApi,
   unauthenticated,
-} from '../test-utils'
+} from '../../test-utils'
 
 const LOGIN = 'POST /api/auth/login/'
 
 async function renderLogin(routes: Parameters<typeof stubApi>[0] = {}) {
   const api = stubApi({ 'GET /api/auth/me/': unauthenticated, ...routes })
-  const app = renderApp()
+  const app = renderApp('/login')
   await screen.findByRole('heading', { name: 'Sign in' })
   return { ...api, ...app }
 }
@@ -36,12 +36,18 @@ test('the fields are labelled for password managers', async () => {
   expect(screen.getByLabelText('Password')).toHaveAttribute('autocomplete', 'current-password')
 })
 
-test('signing in shows the app', async () => {
-  const { user, fetchMock } = await renderLogin({ [LOGIN]: json(ALICE) })
+test('signing in goes to /patients', async () => {
+  const { user, fetchMock, routes, location } = await renderLogin({
+    [LOGIN]: () => {
+      routes['GET /api/auth/me/'] = json(ALICE)() // the session now exists
+      return Response.json(ALICE)
+    },
+  })
 
   await signIn(user)
 
   expect(await screen.findByText('Alice Martin')).toBeInTheDocument()
+  expect(location()).toBe('/patients')
   const [[, init]] = requestsTo(fetchMock, LOGIN)
   expect(JSON.parse(init!.body as string)).toEqual({
     email: 'alice@example.com',

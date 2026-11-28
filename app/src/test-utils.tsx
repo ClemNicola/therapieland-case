@@ -1,9 +1,10 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { createMemoryRouter, RouterProvider } from 'react-router'
 import { vi } from 'vitest'
 import { createQueryClient } from './api/queryClient'
-import App from './App'
+import { routes } from './routes'
 
 // Fake data only.
 export const ALICE = {
@@ -44,16 +45,22 @@ export const json = (body: unknown, status = 200) => () => Response.json(body, {
 export const empty = (status: number) => () => new Response(null, { status })
 export const unauthenticated = json({ detail: 'Authentication credentials were not provided.' }, 401)
 
-export function renderApp() {
-  // No retry delay in tests: errors show up immediately.
-  const queryClient = createQueryClient({ retryDelay: 0 })
+/** Renders the whole app (real routes and query client) at `path`, like main.tsx does. */
+export function renderApp(path = '/') {
+  const router = createMemoryRouter(routes, { initialEntries: [path] })
+  const queryClient = createQueryClient({
+    onUnauthenticated: () => void router.navigate('/login', { replace: true }),
+    // No retry delay in tests: errors show up immediately.
+    queryDefaults: { retryDelay: 0 },
+  })
   const user = userEvent.setup()
   render(
     <QueryClientProvider client={queryClient}>
-      <App />
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   )
-  return { queryClient, user }
+  const location = () => router.state.location.pathname
+  return { queryClient, user, router, location }
 }
 
 export function requestsTo(fetchMock: ReturnType<typeof stubApi>['fetchMock'], key: string) {
