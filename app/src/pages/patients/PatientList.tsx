@@ -39,10 +39,9 @@ export function PatientList({ patients }: { patients: PatientRow[] }) {
           placeholder="Name or patient ID"
         />
       </div>
-      <p aria-live="polite" className="mt-3 text-sm text-muted">
-        {globalFilter.trim()
-          ? `Showing ${rows.length} of ${patients.length} patients`
-          : `${patients.length} ${patients.length === 1 ? 'patient' : 'patients'}`}
+      {/* Kept in the DOM (empty) so screen readers announce the count when a search starts. */}
+      <p aria-live="polite" className="mt-3 text-sm text-muted empty:hidden">
+        {globalFilter.trim() ? `Showing ${rows.length} of ${patients.length} patients` : ''}
       </p>
 
       {rows.length === 0 ? (

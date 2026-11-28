@@ -6,6 +6,7 @@ import type { z } from "zod";
 import { ApiError } from "../../api/client";
 import { getGetMeQueryKey, useLogin } from "../../api/generated/endpoints";
 import { LoginBody } from "../../api/generated/endpoints.zod";
+import { TextField } from "../../components/TextField";
 
 type LoginForm = z.infer<typeof LoginBody>;
 
@@ -78,7 +79,7 @@ export function LoginPage() {
           </p>
         )}
 
-        <Field
+        <TextField
           id="email"
           label="Email"
           error={errors.email?.message}
@@ -87,7 +88,7 @@ export function LoginPage() {
           inputMode="email"
           {...register("email")}
         />
-        <Field
+        <TextField
           id="password"
           label="Password"
           error={errors.password?.message}
@@ -105,40 +106,5 @@ export function LoginPage() {
         </button>
       </form>
     </main>
-  );
-}
-
-// A labelled input with its error linked for screen readers (React 19: `ref` is a prop).
-function Field({
-  id,
-  label,
-  error,
-  ...input
-}: {
-  id: string;
-  label: string;
-  error?: string;
-} & React.ComponentProps<"input">) {
-  const errorId = `${id}-error`;
-  return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="font-medium">
-        {label}
-      </label>
-      <input
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        className={`min-h-11 w-full rounded-md border bg-white px-3 text-base ${
-          error ? "border-brick" : "border-line"
-        }`}
-        {...input}
-      />
-      {error && (
-        <p id={errorId} className="text-sm text-brick">
-          {error}
-        </p>
-      )}
-    </div>
   );
 }

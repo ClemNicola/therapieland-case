@@ -15,6 +15,7 @@ import {
   shortId,
   type PatientRow,
 } from '../../lib/patientFhir'
+import { PatientActions } from './PatientActions'
 import { BirthDate, Contact } from './PatientFields'
 
 // Module scope: TanStack Table needs stable features and columns.
@@ -54,5 +55,10 @@ export const patientColumns = helper.columns([
     id: 'contact',
     header: 'Contact',
     cell: (info) => <Contact patient={info.row.original} />,
+  }),
+  helper.display({
+    id: 'actions',
+    header: () => <span className="sr-only">Actions</span>,
+    cell: (info) => <PatientActions patient={info.row.original} />,
   }),
 ])

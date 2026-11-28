@@ -139,3 +139,13 @@ export function setScreen(size: 'mobile' | 'desktop') {
     dispatchEvent: () => false,
   })) as typeof window.matchMedia
 }
+
+/**
+ * Matches the innermost element whose full text is `expected`, even when it is split across
+ * nested elements (e.g. "<span>Last change: </span>Jane Doe added.").
+ */
+export function byTextContent(expected: string) {
+  return (_content: string, element: Element | null) =>
+    element?.textContent === expected &&
+    ![...element.children].some((child) => child.textContent === expected)
+}

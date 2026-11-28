@@ -181,6 +181,8 @@ shortcuts). Frontend: Vitest + Testing Library (jsdom).
   the patient is archived only when the last practitioner stops following it (the check locks the row,
   so concurrent deletes can't leave an active patient nobody follows). Consequence: a patient is never
   hidden from colleagues by one practitioner's action.
+- **Unfollowing is not reversible from the app.** Re-following would require searching patients you
+  don't follow, which breaks access scoping (a practitioner only ever sees their own patients).
 - **No optimistic locking** (FHIR `ETag` / `If-Match`): if two practitioners edit the same patient at
   the same time, the last write wins.
 - **Archived patients return `404`**, not FHIR's `410 Gone`, and there is no restore endpoint yet.

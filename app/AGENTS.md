@@ -11,9 +11,9 @@ The developer comes from NestJS/Java: explain React idioms briefly when they are
 |------|----------|
 | `src/routes.tsx` | The route table (React Router). |
 | `src/pages/<route>/` | One folder per route: `auth/` (login), `patients/`. The page component and what only it uses. |
-| `src/components/` | Shared UI: `ProtectedRoute` (the `/me` guard), `AppLayout` (signed-in shell), `SearchInput`, `DataTable` (renders any TanStack table). |
+| `src/components/` | Shared UI: `ProtectedRoute` (the `/me` guard), `AppLayout` (signed-in shell), `SearchInput`, `DataTable` (renders any TanStack table), `Dialog` (native modal `<dialog>`), `TextField`. |
 | `src/hooks/` | Shared hooks. |
-| `src/lib/` | Plain helpers, e.g. the FHIR ↔ form mapping. |
+| `src/lib/` | Plain helpers: `patientFhir` (FHIR → rows, dates, search), `patientForm` (form schema, form → FHIR, OperationOutcome → fields). |
 | `src/api/generated/` | Orval output (hooks, types, Zod schemas). Gitignored, regenerated before dev/build/test/typecheck. **Never edit.** |
 | `src/api/client.ts` | The only hand-written `fetch` (Orval mutator): session cookie, CSRF header, `ApiError`. |
 | `src/api/queryClient.ts` | The TanStack Query client: in-memory cache, retry policy, global 401 handling. |
@@ -61,6 +61,10 @@ React Router (`react-router`; since v7 it includes what `react-router-dom` provi
 - Accessible: semantic elements, a `<label>` for every input, errors linked with `aria-describedby`
   and announced (`role="alert"` / `aria-live`), visible focus, everything usable with the keyboard,
   AA contrast, touch targets ≥ 44px.
+- Every clickable element shows `cursor: pointer` and a visible focus state. Both come from the base
+  styles in `index.css` (buttons, links, radios, checkboxes, their labels, `role="button"`); never
+  remove the focus ring (`outline-none`) on an interactive element. Clickable means a real `<button>`
+  or `<a href>`, not an `onClick` on a `<div>`.
 - No hand-written `useMemo`/`useCallback`/`memo`: the React Compiler memoizes.
 
 **Lists**: TanStack Table (headless), driven by the generated query data. Search, sort and filter are
@@ -93,3 +97,8 @@ make npm cmd="install <pkg>"      # dependencies, then `make up` to rebuild
 ```
 
 Before considering work done: `make test`, `make lint`, `make typecheck`.
+
+**Enforced automatically**: a Claude Code hook (`.claude/settings.json` →
+`.claude/hooks/check-app.sh`) runs oxlint + `tsc` after every Edit/Write of a file under `app/` and
+feeds failures back; fix them before moving on. It only sees the Edit/Write tools: edit `app/` files
+with them, not with shell commands.

@@ -17,6 +17,21 @@
     border-top: 4px solid var(--color-pine);
   }
 
+  /* Every clickable element shows the pointer (Tailwind 4 resets buttons to the default). */
+  :is(
+      a[href],
+      button,
+      [role='button'],
+      summary,
+      select,
+      input[type='radio'],
+      input[type='checkbox'],
+      label:has(input[type='radio'], input[type='checkbox'])
+    ):not(:disabled, :has(:disabled)) {
+    cursor: pointer;
+  }
+
+  /* ...and a visible focus ring for keyboard users. Don't remove it on interactive elements. */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-pine;
   }

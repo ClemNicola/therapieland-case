@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import { expect, test } from 'vitest'
 import {
   ALICE,
+  byTextContent,
   json,
   patientBundle,
   patientResource,
@@ -84,6 +85,20 @@ test('lists the patients sorted by family name, accents included', async () => {
   await screen.findByText('Adam Abbott')
 
   expect(displayedNames()).toEqual(['Adam Abbott', 'Émile Éluard', 'Zoë Zimmer'])
+})
+
+test('shows the number of patients next to the heading, not as a separate line', async () => {
+  const { user } = renderPatients(json(patientBundle(ZOE, ADAM, EMILE)))
+  await screen.findByText('Adam Abbott')
+
+  // Visually "3" next to "Patients"; screen readers hear "3 patients".
+  expect(screen.getByText(byTextContent('3 patients'))).toBeInTheDocument()
+  expect(screen.getAllByText(byTextContent('3 patients'))).toHaveLength(1)
+
+  await user.type(screen.getByRole('searchbox', { name: 'Search patients' }), 'zoe')
+
+  expect(screen.getByText(byTextContent('3 patients'))).toBeInTheDocument() // still the total
+  expect(screen.getByText('Showing 1 of 3 patients')).toBeInTheDocument()
 })
 
 test('shows the details a practitioner needs on each row', async () => {

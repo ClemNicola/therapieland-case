@@ -1,4 +1,5 @@
 import { fullName, GENDER_LABELS, shortId, type PatientRow } from '../../lib/patientFhir'
+import { PatientActions } from './PatientActions'
 import { BirthDate, Contact } from './PatientFields'
 
 /** The mobile view of the patient list: same rows as the table, one card each. */
@@ -17,6 +18,9 @@ export function PatientCards({ patients }: { patients: PatientRow[] }) {
           <p>{GENDER_LABELS[patient.gender]}</p>
           <div className="mt-2">
             <Contact patient={patient} />
+          </div>
+          <div className="mt-4 border-t border-line pt-3">
+            <PatientActions patient={patient} />
           </div>
         </li>
       ))}
