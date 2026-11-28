@@ -8,7 +8,7 @@ APP := $(COMPOSE) exec app
 
 .DEFAULT_GOAL := help
 .PHONY: help up down reset logs ps test test-api test-app lint format typecheck \
-	schema migrate makemigrations create-practitioner shell check-deploy manage uv npm
+	schema migrate makemigrations seed create-practitioner shell check-deploy manage uv npm
 
 help: ## List available commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -61,6 +61,9 @@ migrate: ## Apply database migrations
 
 makemigrations: ## Create migrations from model changes
 	$(API) python manage.py makemigrations
+
+seed: ## Seed the local demo practitioners and patients (idempotent, dev only)
+	$(API) sh seed_dev.sh
 
 create-practitioner: ## Create a practitioner account (prompts for details and password)
 	$(API) python manage.py create_practitioner

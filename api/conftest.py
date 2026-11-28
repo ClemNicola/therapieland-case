@@ -27,11 +27,13 @@ def make_user(db):
 
 @pytest.fixture
 def make_patient(db):
-    def _make_patient(**fields):
+    def _make_patient(followed_by=(), **fields):
         fields.setdefault("family_name", "Smith")
         fields.setdefault("given_name", "John")
         fields.setdefault("birth_date", datetime.date(1980, 5, 17))
         fields.setdefault("gender", Gender.MALE)
-        return Patient.objects.create(**fields)
+        patient = Patient.objects.create(**fields)
+        patient.practitioners.add(*followed_by)
+        return patient
 
     return _make_patient

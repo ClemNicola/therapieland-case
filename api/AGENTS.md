@@ -17,7 +17,7 @@ app (`python manage.py startapp <name>`), e.g. `patients/`, with one file per re
 | `models.py` | Model (entity) | Fields, DB constraints, `TextChoices`. No business logic. |
 | `serializers.py` | Serializer (DTO + validation) | Validates input, shapes output. Never writes to the DB: hands validated data to a service. |
 | `views.py` | ViewSet / API view (controller) | HTTP only: permissions, call a selector or service, serialize the result. No ORM calls. |
-| `services.py` | Services (service) | Plain functions for writes and business rules. Own transactions (`transaction.atomic`) and audit logging. |
+| `services.py` | Services (service) | Plain functions for writes and business rules. Own transactions (`transaction.atomic`). |
 | `selectors.py` | Selectors (DAO) | Plain functions for reads, built on the ORM. Always scoped to what the requesting user may access. |
 | `fhir.py` | FHIR mapping | Model ↔ FHIR resource conversion (see FHIR). |
 | `urls.py` | Routes | DRF router, included from `config/urls.py`. |
@@ -61,10 +61,6 @@ app (`python manage.py startapp <name>`), e.g. `patients/`, with one file per re
 - Store only the fields the product needs (data minimization). Adding a PHI field is a product decision,
   not an implementation detail.
 
-**Audit trail**
-- Every create, read, update and delete of patient data records who (user), what (resource type + UUID),
-  which action and when. Written by services/selectors, never skippable, never contains PHI values.
-
 **General**
 - Secrets only from environment variables (`config/settings.py` reads them, fails if missing).
 - Tests and fixtures use fake data only, never real patient data.
@@ -82,6 +78,11 @@ Patient data is exposed as **FHIR R4** resources, built and validated with `fhir
   Coded fields are constrained by our `TextChoices`, mirroring the FHIR value set exactly.
 - Unsupported FHIR elements in input are rejected with a 400, never silently dropped or stored raw.
 - Growing the subset is deliberate: add a column, its mapping, and tests.
+- Errors of FHIR endpoints are `OperationOutcome`s (`patients.views.fhir_exception_handler`): a FHIR
+  issue code, the element path in `expression`, and a fixed message. Never pass library error text
+  (pydantic, DRF) through: it can contain submitted values. Only known element names go in `expression`.
+- `DELETE` on a patient = the practitioner stops following it; archived when nobody follows it.
+  Patients are never hard-deleted.
 
 ## Tests (TDD)
 
@@ -111,6 +112,7 @@ make lint / make format           # ruff
 make schema                       # export openapi.yaml + regenerate the frontend client
 make makemigrations / make migrate
 make shell                        # Django shell
+make seed                         # demo practitioners + patients (idempotent, dev only)
 make create-practitioner          # create an account (interactive)
 make manage cmd="…"               # any manage.py command
 make uv cmd="add <pkg>"           # dependencies, then `make up` to rebuild

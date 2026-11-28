@@ -17,6 +17,16 @@ def test_swagger_ui_is_served(client):
     assert client.get("/api/docs/").status_code == 200
 
 
+def test_swagger_ui_sends_the_current_csrf_token(client):
+    """Login rotates the CSRF token: Swagger UI must read the cookie at request time,
+    not use a token baked into its script when the page loaded."""
+    script = client.get("/api/docs/", {"script": ""}).content.decode()
+
+    assert "document.cookie" in script
+    assert f"{settings.CSRF_COOKIE_NAME}=" in script
+    assert '"X-CSRFToken"' in script
+
+
 def test_committed_schema_is_up_to_date(tmp_path):
     """openapi.yaml drives the frontend codegen: it must match the code. Fix: `make schema`."""
     generated = tmp_path / "openapi.yaml"
